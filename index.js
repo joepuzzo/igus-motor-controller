@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const startServer = require('./src/server');
+import {startServer} from './src/server.js';
 
 // Define default config
 const config = {

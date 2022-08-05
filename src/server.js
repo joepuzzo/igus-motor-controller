@@ -1,15 +1,16 @@
 import io from 'socket.io-client';
-import { Motor } from './motor';
+import { Motor } from './motor.js';
 
 // For debugging
-import { Debug } from './debug';
+import { Debug } from './debug.js';
 const logger = Debug('igus:server' + '\t');
 
-module.exports = (config) => {
+export const startServer = (config) => {
 
   // Create socket
-  const socket = io(`http://${config.host}:${config.port}/motor?id=${config.id}`);
-  logger("created socket");
+  const connectionString = `http://${config.host}:${config.port}/motor?id=${config.id}`;
+  const socket = io(connectionString);
+  logger("created socket", connectionString);
 
   // Create motor
   const motor = new Motor({ id: config.id });

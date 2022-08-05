@@ -1,5 +1,6 @@
 
-import can from "socketcan";
+// import can from "socketcan";
+import {EventEmitter} from 'events';
 
 /**
  * Igus motor controller
@@ -37,7 +38,7 @@ export class Motor extends EventEmitter   {
     this.stopped = false;             // will disable position sends
 
     // Create channel
-    this.channel = can.createRawChannel('vcan0', true);
+    // this.channel = can.createRawChannel('vcan0', true);
 
     // Start up
     this.start();
@@ -47,9 +48,9 @@ export class Motor extends EventEmitter   {
    * Will write every 50ms ( frequency for controller)
    */
   start() {
-    setInterval(() => {
-      this.writeJointSetPoints();
-    }, this.cycleTime);
+    // setInterval(() => {
+    //   this.writeJointSetPoints();
+    // }, this.cycleTime);
 
     this.emit('ready');
   }
