@@ -1,12 +1,22 @@
 
 import can from "socketcan";
 
-export class Motor  {
+/**
+ * Igus motor controller
+ * 
+ * This motor controller is based on the CPR_CAN_Protocol_V2 guide linked below
+ * 
+ * https://cpr-robots.com/download/CAN/CPR_CAN_Protocol_V2_UserGuide_en.pdf
+ */
+export class Motor extends EventEmitter   {
 
   /** -----------------------------------------------------------
    * Constructor
    */
-  constructor(id) {
+  constructor({ id }) {
+
+    // Becasuse we are event emitter
+    super();
 
     // Define parameters
     this.id = id;
@@ -20,6 +30,11 @@ export class Motor  {
     this.goalPosition = 0;            // The joint goal position in degrees
     this.currentPosition  = 0;        // the current joint positions in degree, loaded from the robot arm
     this.jointPositionSetPoint = 0;   // The set point is a periodicly updated goal point 
+    this.timeStamp = 0;               // For message ordering 
+    this.motorCurrent = 0;            // Motor current in mA
+    this.errorCode = 0;               // the error state of the joint module
+    this.errorCodeString;             // human readable error code for the joint module
+    this.stopped = false;             // will disable position sends
 
     // Create channel
     this.channel = can.createRawChannel('vcan0', true);
@@ -35,29 +50,19 @@ export class Motor  {
     setInterval(() => {
       this.writeJointSetPoints();
     }, this.cycleTime);
+
+    this.emit('ready');
   }
 
   /** ---------------------------------
-   * Will set the goal position
-   * 
-   * @param {*} position - Position to go in degrees
-   * @param {*} velocity - velocity in degrees / sec
-   */
-  setGoalPosition( position, velocity ) {
-    this.velocity = velocity;
-    this.goalPosition = position;
-  }
-
-  /** ---------------------------------
-   * Will write out the pos values for joint
-   * 
-   * @param {*} jointSetPoint -  Position to go in degree 
-   * @param {*} digitalOut - State of the digital outputs (if there are any) of the module, coded binary
-   * @param {*} jointCurrent - Current position of the joint in degree
-   * @param {*} motorCurrent - Motor current in mA
-   * 
+   * Will write out the pos values for joint 
    */
   writeJointSetPoints(){
+
+    // If we are are stopped then dont send anything
+    if(this.stopped){
+      return;
+    }
 
     // write the setPoint command to the CAN bus
     // CPRCANV2 protocol:
@@ -86,16 +91,19 @@ export class Motor  {
 
     // generate the pos in encoder tics instead of degrees
     const pos = this.jointPositionSetPoint * this.gearScale; 
+
+    // Update the timestamp keeping it between 0-255 
+    this.timeStamp = this.timeStamp === 255 ? 0 : this.timeStamp + 1;
     
     // Create buffer for data
     const buff = Buffer.alloc(8)
-  
+
     // Set data 
     buff[0] = 0x14;                                           // First byte denominates the command, here: set joint position
     buff[1] = 0x00;                                           // Velocity, not used
     buff.writeUIntBE(pos, 2, 4)                               // Write the position to the data 
-    buff[6] = timeStamp;                                      // Time stamp (not used)
-    buff[7] = digitalOut;                                     // Digital out for this module, binary coded
+    buff[6] = this.timeStamp;                                 // Time stamp (not used)
+    buff[7] = 0;                                              // Digital out for this module, binary coded
   
     console.log(buff, 'revs:', revs, ' speed:', speed)
 
@@ -107,6 +115,71 @@ export class Motor  {
   
     // Send that shit!
     this.channel.send(out)
+  }
+
+  /** ---------------------------------
+   * Will set the position
+   * 
+   * @param {number} position - Position to go in degrees
+   * @param {number} [velocity] - velocity in degrees / sec
+   */
+  setPosition( position, velocity ) {
+    this.velocity = velocity ?? this.velocity;
+    this.goalPosition = position;
+  }
+
+  /** ---------------------------------
+   * Will home the motor by setting it to zero
+   */
+  home() {
+
+    // We are starting to home
+    this.emit('homing');
+
+    // Create buffer for data
+    const buff = Buffer.alloc(8)
+
+    buff[0] = 0x01;
+    buff[1] = 0x08;
+    buff[2] = 0x00;
+    buff[3] = 0x00;
+
+    // Stop sending pos updates
+    this.stopped = true;
+    
+    // Create our output frame
+    const out = {
+      id: this.id,
+      data: buff
+    };
+
+    // Send first frame
+    this.channel.send(out);
+
+    // Wait 1 ms
+    setTimeout(() => {
+      this.channel.send(out); // Send second frame
+      // Wait 5 ms
+      setTimeout(() =>{
+        this.stopped = false; // Re enable sending pos updates
+      }, 5);
+    }, 1)
+
+  }
+
+   /** ---------------------------------
+   * Will get the current joint state 
+   * 
+   * Usecase for this will be for a UI to poll this periodically and update for user to view
+   */
+  get state(){
+    return {
+      currentPosition: this.currentPosition,
+      jointPositionSetPoint: this.jointPositionSetPoint,
+      motorCurrent: this.motorCurrent,
+      errorCode: this.errorCode,
+      errorCodeString: this.errorCodeString,
+    }
   }
 
 }
