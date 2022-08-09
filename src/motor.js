@@ -175,6 +175,7 @@ export class Motor extends EventEmitter   {
    */
   get state(){
     return {
+      id: this.id,
       currentPosition: this.currentPosition,
       jointPositionSetPoint: this.jointPositionSetPoint,
       motorCurrent: this.motorCurrent,
