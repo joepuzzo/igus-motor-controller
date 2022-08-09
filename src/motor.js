@@ -1,6 +1,8 @@
-
-// import can from "socketcan";
 import {EventEmitter} from 'events';
+
+// For debugging
+import { Debug } from './debug.js';
+const logger = Debug('igus:motor' + '\t');
 
 /**
  * Igus motor controller
@@ -14,7 +16,9 @@ export class Motor extends EventEmitter   {
   /** -----------------------------------------------------------
    * Constructor
    */
-  constructor({ id }) {
+  constructor({ id, channel }) {
+
+    logger(`creating motor with id ${id}`);
 
     // Becasuse we are event emitter
     super();
@@ -37,8 +41,8 @@ export class Motor extends EventEmitter   {
     this.errorCodeString;             // human readable error code for the joint module
     this.stopped = false;             // will disable position sends
 
-    // Create channel
-    // this.channel = can.createRawChannel('vcan0', true);
+    // Our can channel
+    this.channel = channel;
 
     // Start up
     this.start();
@@ -48,6 +52,9 @@ export class Motor extends EventEmitter   {
    * Will write every 50ms ( frequency for controller)
    */
   start() {
+
+    logger(`motor with id ${this.id} is ready`);
+
     // setInterval(() => {
     //   this.writeJointSetPoints();
     // }, this.cycleTime);
@@ -168,7 +175,7 @@ export class Motor extends EventEmitter   {
 
   }
 
-   /** ---------------------------------
+  /** ---------------------------------
    * Will get the current joint state 
    * 
    * Usecase for this will be for a UI to poll this periodically and update for user to view
