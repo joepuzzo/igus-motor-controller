@@ -4,6 +4,16 @@ import {EventEmitter} from 'events';
 import { Debug } from './debug.js';
 const logger = Debug('igus:motor' + '\t');
 
+// Error codes 
+const codes = ['OC', 'DRV', 'ENC', 'LAG', 'COM', 'MNE', 'ESTOP', 'TEMP'];
+
+// Helper
+function dec2bin(dec) {
+  // dec = 26 
+  // decoded = '00011010'
+  return (dec >>> 0).toString(2).padStart(8, '0');
+}
+
 /**
  * Igus motor controller
  * 
@@ -39,7 +49,9 @@ export class Motor extends EventEmitter   {
     this.motorCurrent = 0;            // Motor current in mA
     this.errorCode = 0;               // the error state of the joint module
     this.errorCodeString;             // human readable error code for the joint module
-    this.stopped = false;             // will disable position sends
+    this.stopped = true;              // will disable position sends
+    this.robotStopped = false;        // the motor might stop things but the robot might also have stop set
+    this.gearZero = 0;                // zero pos for gear
 
     // Our can channel
     this.channel = channel;
@@ -49,17 +61,87 @@ export class Motor extends EventEmitter   {
   }
 
   /** ---------------------------------
-   * Will write every 50ms ( frequency for controller)
+   * Subscribe to all events from motor
    */
   start() {
 
+    // Add subscription but only for our messages
+    // this.channel.addListener("onMessage", (msg) => {
+    //   if(msg.id === this.id + 1) {
+    //     this.handleMotionMessage(msg) 
+    //   }
+    //   if(msg.id === this.id + 2) {
+    //     this.handleProcessMessage(msg) 
+    //   }
+    // });
+
+    // Enable the motor
+    this.stopped = false;
+
+    // We are ready
     logger(`motor with id ${this.id} is ready`);
-
-    // setInterval(() => {
-    //   this.writeJointSetPoints();
-    // }, this.cycleTime);
-
     this.emit('ready');
+  }
+
+  /** ---------------------------------
+   * Handles any motion messages
+   */
+  handleMotionMessage(msg) {
+
+    // get the buffer
+    const buff = msg.data
+
+    // err pos0 pos1 pos2 pos3 currentH currentL din 
+    this.errorCode = buff[0];
+    this.errorCodeString = this.decodeError(this.errorCode);
+    const pos = buff.readUIntBE(1, 4); // TODO might need this? .toString(10); 
+
+    this.currentPosition = (pos - this.gearZero) / this.gearScale;
+    this.motorCurrent = buff[6];
+    this.digitalIn = buff[7]; // TODO split this down into its parts like we do with error
+     
+  }
+
+  /** ---------------------------------
+   * Handles any process messages
+   */
+  handleProcessMessage(msg) {
+
+  }
+
+  /** ---------------------------------
+   * decodes error into readable string
+   */
+  decodeError(error){
+    // Example: 
+    // error = 26 
+    // decoded = '00011010'
+    const decoded = dec2bin(error);
+
+    // TEMP Over temperature - The temperature of the motor controller or the motor is above the defined value in the parameters.
+    // ESTOP Emergency stop / no voltage - The voltage at the motor controller is below the set limit value. This may indicate a defective fuse or emergency stop.
+    // COM Communication failure  - The motor controller requires CAN messages at regular intervals. If the distance between the messages is too large or the messages do not arrive, the motor controller stops the movement.
+    // LAG Following error - The motor controller monitors the following error, if this is greater than the value set in the parameters, the motor controller stops the movement.
+    // ENC Encoder error - The motor controller has detected an encoder error. Errors can be triggered by both the motor or the output encoder.
+    // DRV Driver error - A driver error can have various causes. One possible cause is exceeding the maximum speed from the parameters. With the closedloop motor controllers, the error also occurs with problems with the initial rotor position.
+    // OC Over current - The RMS current in the motor controller was above the allowed value in the parameters.
+
+    // OC DRV ENC LAG COM MNE ESTOP TEMP
+    // Example:
+    // 0   0   0   1   1   0    1    0'
+    //            LAG COM      ESTOP
+    //
+    // codes = ['OC', 'DRV', 'ENC', 'LAG', 'COM', 'MNE', 'ESTOP', 'TEMP'];
+
+    let result = '';
+    for( let i = 0; i < 8; i++ ){ 
+      if(decoded[i]){
+        result += `${codes[i]},`
+      }
+    }
+
+    // LAG,COM,ESTOP
+    return result;
   }
 
   /** ---------------------------------
@@ -68,7 +150,7 @@ export class Motor extends EventEmitter   {
   writeJointSetPoints(){
 
     // If we are are stopped then dont send anything
-    if(this.stopped){
+    if(this.stopped || this.robotStopped){
       return;
     }
 
@@ -98,7 +180,7 @@ export class Motor extends EventEmitter   {
     }
 
     // generate the pos in encoder tics instead of degrees
-    const pos = this.jointPositionSetPoint * this.gearScale; 
+    const pos = (this.gearZero + this.jointPositionSetPoint) * this.gearScale; 
 
     // Update the timestamp keeping it between 0-255 
     this.timeStamp = this.timeStamp === 255 ? 0 : this.timeStamp + 1;

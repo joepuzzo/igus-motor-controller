@@ -91,6 +91,15 @@ export class Robot extends EventEmitter   {
   }
 
   /** ---------------------------------
+   * Will home all the motors
+   */
+  home(){
+    this.motors.forEach( motor => {
+      motor.home();
+    });
+  }
+
+  /** ---------------------------------
    * Will get the current robot state 
    * 
    * Usecase for this will be for a UI to poll this periodically and update for user to view
