@@ -120,6 +120,7 @@ export class Motor extends EventEmitter   {
 
     // TEMP Over temperature - The temperature of the motor controller or the motor is above the defined value in the parameters.
     // ESTOP Emergency stop / no voltage - The voltage at the motor controller is below the set limit value. This may indicate a defective fuse or emergency stop.
+    // MNE Motor not activated - The movement of the motor is not enabled, it is not in control.
     // COM Communication failure  - The motor controller requires CAN messages at regular intervals. If the distance between the messages is too large or the messages do not arrive, the motor controller stops the movement.
     // LAG Following error - The motor controller monitors the following error, if this is greater than the value set in the parameters, the motor controller stops the movement.
     // ENC Encoder error - The motor controller has detected an encoder error. Errors can be triggered by both the motor or the output encoder.
@@ -256,6 +257,84 @@ export class Motor extends EventEmitter   {
     }, 1)
 
   }
+
+  /** ---------------------------------
+   * Enable the Motor
+   * The Motor has to be in 0x04 or 00000100 = MNE Motor not enabled state.
+   * This is the state after "reset"
+   * 
+   */
+  enable() {
+    if( !dec2bin(this.errorCode)[5] ){
+      const errorMessage = `Error: Please reset ${id} before enabling`
+      logger(errorMessage);
+      this.emit('error', errorMessage);
+    } else { 
+
+      // Protocol: 0x01 0x09 to enable a joint
+      //           0x01 0x0A to disable a joint
+
+      // Create buffer for data
+      const buff = Buffer.alloc(8)
+
+      buff[0] = 0x01;
+      buff[1] = 0x09;
+
+      // Stop sending pos updates
+      this.stopped = true; 
+
+      // Create our output frame
+      const out = {
+        id: this.id,
+        data: buff
+      };
+
+      // Send frame
+      this.channel.send(out);
+    
+      // Wait 5 ms
+      setTimeout(() => {
+        this.stopped = false; // Re enable sending pos updates
+        this.emit('enabled');
+      }, 5)
+    }
+  }
+
+  /** ---------------------------------
+   * Resets the errors of the joint module. Error will be 0x04 afterwards (motors not enabled)
+   * You need to enable the motors afterwards to get the robot in running state (0x00)
+   * 
+   */
+  reset() {
+   
+    // Protocol: 0x01 0x06 
+
+    // Create buffer for data
+    const buff = Buffer.alloc(8)
+
+    buff[0] = 0x01;
+    buff[1] = 0x06;
+
+    // Stop sending pos updates
+    this.stopped = true; 
+
+    // Create our output frame
+    const out = {
+      id: this.id,
+      data: buff
+    };
+
+    // Send frame
+    this.channel.send(out);
+  
+    // Wait 5 ms
+    setTimeout(() => {
+      this.stopped = false; // Re enable sending pos updates
+      this.emit('reset');
+    }, 5)
+    
+  }
+
 
   /** ---------------------------------
    * Will get the current joint state 
