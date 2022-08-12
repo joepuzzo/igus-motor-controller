@@ -177,7 +177,11 @@ export class Motor extends EventEmitter   {
     const tolerance = 0.05;
     if( Math.abs(this.goalPosition - this.currentPosition) > tolerance ){ 
       // basically we are increasing the goal degs by our movement segments
-      this.jointPositionSetPoint = this.jointPositionSetPoint + movement;  // TODO maybe this should use this.currentPosition + movement ?? 
+      // 
+      // note: we may have case where we are going from 45 to 40 where the dif is 40 - 45 ===> -5
+      // in this case we want to go other direction
+      const neg = this.goalPosition < this.currentPosition;
+      this.jointPositionSetPoint = this.jointPositionSetPoint + ( neg ? -movement : movement);  // TODO maybe this should use this.currentPosition + movement ?? 
     }
 
     // generate the pos in encoder tics instead of degrees
