@@ -44,6 +44,7 @@ export const startServer = (config) => {
 
   socket.on('connect', ()=>{
     logger("robot is connected to controller, sending state", robot.state);
+    socket.emit('meta', robot.meta);
     socket.emit('state', robot.state );
   });
 

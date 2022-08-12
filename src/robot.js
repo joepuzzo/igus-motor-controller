@@ -117,4 +117,16 @@ export class Robot extends EventEmitter   {
     }
   }
 
+  /** ---------------------------------
+   * Will get the current robot metadata  
+   */
+  get meta(){
+    return {
+      id: this.id,
+      motors: this.motors.map( m => ({
+        id: m.id
+      }))
+    }
+  }
+
 }
