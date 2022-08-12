@@ -28,10 +28,13 @@ export class Robot extends EventEmitter   {
 
     // Create motors
     this.motorMap = {};
-    this.motors = motors.map( config => {
+    this.indexMap = {};
+    this.motors = motors.map( (config, i) => {
       const motor = new Motor({ ...config, channel: this.channel })
       // Track by id
       this.motorMap[config.id] = motor;
+      // Track by index
+      this.indexMap[config.id] = i;
       return motor;
     });
 
@@ -87,7 +90,8 @@ export class Robot extends EventEmitter   {
    * @param {number} [velocity] - velocity in degrees / sec
    */
   setMotorPosition(id, position, velocity){
-    motorMap[id].setPosition(position, velocity)
+    logger(`setMotorPos to ${position} for ${id}`);
+    this.motorMap[id].setPosition(position, velocity)
   }
 
   /** ---------------------------------
@@ -105,8 +109,10 @@ export class Robot extends EventEmitter   {
    * Usecase for this will be for a UI to poll this periodically and update for user to view
    */
   get state(){
+
     return {
       id: this.id,
+      indexMap: this.indexMap,
       motors: this.motors.map( m => m.state )
     }
   }

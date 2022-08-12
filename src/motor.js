@@ -346,9 +346,10 @@ export class Motor extends EventEmitter   {
       id: this.id,
       currentPosition: this.currentPosition,
       jointPositionSetPoint: this.jointPositionSetPoint,
+      goalPosition: this.goalPosition,
       motorCurrent: this.motorCurrent,
       errorCode: this.errorCode,
-      errorCodeString: this.errorCodeString,
+      errorCodeString: this.errorCodeString ?? 'n/a',
     }
   }
 
