@@ -269,6 +269,9 @@ export class Motor extends EventEmitter   {
    * 
    */
   enable() {
+
+    logger(`enabling motor with id ${this.id}`);
+
     if( !dec2bin(this.errorCode)[5] ){
       const errorMessage = `Error: Please reset ${id} before enabling`
       logger(errorMessage);
@@ -310,6 +313,8 @@ export class Motor extends EventEmitter   {
    * 
    */
   reset() {
+
+    logger(`resetting errors for motor with id ${this.id}`);
    
     // Protocol: 0x01 0x06 
 

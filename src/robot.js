@@ -24,7 +24,7 @@ export class Robot extends EventEmitter   {
     super();
 
     // Create channel
-    this.channel = null; // can.createRawChannel('vcan0', true);
+    this.channel = { send: () => {} }; // can.createRawChannel('vcan0', true);
 
     // Create motors
     this.motorMap = {};
@@ -59,9 +59,9 @@ export class Robot extends EventEmitter   {
     // }, this.cycleTime);
 
     // Will push updates to ui 
-    setInterval(() => {
-      this.emit('state', this.state);
-    }, this.uiFrequency);
+    // setInterval(() => {
+    //   this.emit('state', this.state);
+    // }, this.uiFrequency);
 
     logger(`robot with id ${this.id} is ready`);
     this.emit('ready');
@@ -92,6 +92,26 @@ export class Robot extends EventEmitter   {
   setMotorPosition(id, position, velocity){
     logger(`setMotorPos to ${position} for ${id}`);
     this.motorMap[id].setPosition(position, velocity)
+  }
+
+  /** ---------------------------------
+   * Will reset the errors on specified motor
+   * 
+   * @param {*} id  
+   */
+  resetErrors(id){
+    logger(`resetErrors for motor ${id}`);
+    this.motorMap[id].reset()
+  }
+
+  /** ---------------------------------
+   * Will enable the specified motor
+   * 
+   * @param {*} id  
+   */
+  enableMotor(id){
+    logger(`enableMotor ${id}`);
+    this.motorMap[id].enable()
   }
 
   /** ---------------------------------

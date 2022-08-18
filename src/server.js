@@ -53,8 +53,18 @@ export const startServer = (config) => {
   });
 
   socket.on('setMotorPos', (id, pos) => {
-    logger(`controller says setMotorPos to ${pos} for ${id}`);
+    logger(`controller says setMotorPos to ${pos} for motor ${id}`);
     robot.setMotorPosition(id, pos);
+  });
+
+  socket.on('resetErrors', (id) => {
+    logger(`controller says resetErrors for motor ${id}`);
+    robot.resetErrors(id);
+  });
+
+  socket.on('enableMotor', (id) => {
+    logger(`controller says enableMotor ${id}`);
+    robot.enableMotor(id);
   });
 
   socket.on('home', () => {
