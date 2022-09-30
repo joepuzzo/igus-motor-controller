@@ -28,13 +28,10 @@ export class Robot extends EventEmitter   {
 
     // Create motors
     this.motorMap = {};
-    this.indexMap = {};
     this.motors = motors.map( (config, i) => {
       const motor = new Motor({ ...config, channel: this.channel })
       // Track by id
       this.motorMap[config.id] = motor;
-      // Track by index
-      this.indexMap[config.id] = i;
       return motor;
     });
 
