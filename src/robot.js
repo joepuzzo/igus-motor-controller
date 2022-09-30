@@ -43,6 +43,7 @@ export class Robot extends EventEmitter   {
     this.uiFrequency = 1000;          // time in ms to update the ui
     this.cycleTime = 50;              // time in ms to push updates to motors
     this.stopped = false;             // will disable position sends
+    this.ready = false;               // if robot is ready
 
     // Start up
     this.start();
@@ -64,6 +65,7 @@ export class Robot extends EventEmitter   {
     // }, this.uiFrequency);
 
     logger(`robot with id ${this.id} is ready`);
+    this.ready = true;
     this.emit('ready');
   }
 
@@ -122,6 +124,14 @@ export class Robot extends EventEmitter   {
       motor.home();
     });
   }
+  
+  /** ---------------------------------
+   * Will home a specific motor
+   */
+  homeMotor(id){
+    logger(`homing motor ${id}`);
+    this.motorMap[id].home()
+  }
 
   /** ---------------------------------
    * Will get the current robot state 
@@ -129,24 +139,35 @@ export class Robot extends EventEmitter   {
    * Usecase for this will be for a UI to poll this periodically and update for user to view
    */
   get state(){
-
-    return {
-      id: this.id,
-      indexMap: this.indexMap,
-      motors: this.motors.map( m => m.state )
-    }
+      // Build motors state object
+      const motors = {};
+      Object.values(this.motors).forEach( motor => {
+        motors[motor.id] = motor.state;
+      });
+  
+      // return state
+      return {
+        id: this.id,
+        motors
+      }
   }
 
   /** ---------------------------------
    * Will get the current robot metadata  
    */
   get meta(){
-    return {
-      id: this.id,
-      motors: this.motors.map( m => ({
-        id: m.id
-      }))
-    }
+     // Build motors state object
+     const motors = {};
+     Object.values(this.motors).forEach( motor => {
+       motors[motor.id] = { id: motor.id };
+     });
+ 
+     // return meta
+     return {
+       stopped: this.stopped, 
+       ready: this.ready, 
+       motors
+     }
   }
 
 }

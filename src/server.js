@@ -19,32 +19,38 @@ export const startServer = (config) => {
   const robot = new Robot({ id: config.id, motors });
 
   /* ---------- Subscribe to robot events ---------- */
-  robot.on('ready', () => {
-    logger("robot is ready sending state", robot.state);
-    socket.emit('state', robot.state );
-  });
-
-  robot.on('homing', () => {
-    logger("robot is homing sending state", robot.state);
-    socket.emit('state', robot.state );
-  });
-
-  robot.on('home', () => {
-    logger("robot is home sending state", robot.state);
-    socket.emit('state', robot.state );
-  });
-
   robot.on('state', () => {
-    logger("sending state", robot.state);
+    logger("sending state");
     socket.emit('state', robot.state );
+  });
+
+  robot.on('encoder', () => {
+    // Specifically dont log here ( to much logging )
+    socket.emit('encoder', robot.state );
+  });
+
+  robot.on('ready', () => {
+    logger("robot ready sending state and registering");
+    socket.emit('register', robot.meta);
+    socket.emit('state', robot.state );  
+  });
+
+  robot.on('meta', () => {
+    logger("sending meta");
+    socket.emit("register", robot.meta);
+  });
+
+  robot.on('moved', () => {
+    logger("sending moved");
+    socket.emit("moved", robot.meta);
   });
 
 
   /* ---------- Subscribe to socket events ---------- */
 
   socket.on('connect', ()=>{
-    logger("robot is connected to controller, sending state", robot.state);
-    socket.emit('meta', robot.meta);
+    logger("robot is connected to controller, sending state");
+    socket.emit('register', robot.meta);
     socket.emit('state', robot.state );
   });
 
@@ -52,22 +58,27 @@ export const startServer = (config) => {
     logger("controller says hello");
   });
 
-  socket.on('setMotorPos', (id, pos) => {
+  socket.on('motorSetPos', (id, pos) => {
     logger(`controller says setMotorPos to ${pos} for motor ${id}`);
     robot.setMotorPosition(id, pos);
   });
 
-  socket.on('resetErrors', (id) => {
+  socket.on('motorResetErrors', (id) => {
     logger(`controller says resetErrors for motor ${id}`);
     robot.resetErrors(id);
   });
 
-  socket.on('enableMotor', (id) => {
+  socket.on('motorEnable', (id) => {
     logger(`controller says enableMotor ${id}`);
     robot.enableMotor(id);
   });
 
-  socket.on('home', () => {
+  socket.on('motorHome', (id) => {
+    logger(`controller says motorHome ${id}`);
+    robot.homeMotor(id);
+  });
+
+  socket.on('robotHome', () => {
     logger(`controller says home robot`);
     robot.home();
   });

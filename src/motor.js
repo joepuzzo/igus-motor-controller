@@ -227,6 +227,7 @@ export class Motor extends EventEmitter   {
    * Will home the motor by setting it to zero
    */
   home() {
+    logger(`homing motor with id ${this.id}`);
 
     // We are starting to home
     this.emit('homing');
