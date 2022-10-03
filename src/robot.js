@@ -1,5 +1,5 @@
 
-// import can from "socketcan";
+import can from "socketcan";
 import {EventEmitter} from 'events';
 import { Motor } from './motor.js';
 
@@ -24,7 +24,8 @@ export class Robot extends EventEmitter   {
     super();
 
     // Create channel
-    this.channel = { send: () => {} }; // can.createRawChannel('vcan0', true);
+    //this.channel = { send: () => {} }; 
+    this.channel = can.createRawChannel('can1', true);
 
     // Create motors
     this.motorMap = {};
@@ -52,18 +53,19 @@ export class Robot extends EventEmitter   {
   start() {
 
     // Will write every 50ms ( frequency for controller)
-    // setInterval(() => {
-    //   this.writeJointSetPoints();
-    // }, this.cycleTime);
+    setInterval(() => {
+      this.writeJointSetPoints();
+    }, this.cycleTime);
 
     // Will push updates to ui 
-    // setInterval(() => {
-    //   this.emit('state', this.state);
-    // }, this.uiFrequency);
+    setInterval(() => {
+      this.emit('state', this.state);
+    }, this.uiFrequency);
 
     logger(`robot with id ${this.id} is ready`);
     this.ready = true;
     this.emit('ready');
+    this.channel.start();
   }
 
   /** ---------------------------------

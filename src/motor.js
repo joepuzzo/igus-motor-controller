@@ -66,17 +66,21 @@ export class Motor extends EventEmitter   {
   start() {
 
     // Add subscription but only for our messages
-    // this.channel.addListener("onMessage", (msg) => {
-    //   if(msg.id === this.id + 1) {
-    //     this.handleMotionMessage(msg) 
-    //   }
-    //   if(msg.id === this.id + 2) {
-    //     this.handleProcessMessage(msg) 
-    //   }
-    // });
+    this.channel.addListener("onMessage", (msg) => {
+
+      if(msg.id === this.id + 1) {
+        this.handleMotionMessage(msg) 
+      }
+      if(msg.id === this.id + 2) {
+        this.handleProcessMessage(msg) 
+      }
+      if(msg.id === this.id + 3) {
+        this.handleEnvironmentalMessage(msg) 
+      }
+    });
 
     // Enable the motor
-    this.stopped = false;
+    //this.stopped = false;
 
     // We are ready
     logger(`motor with id ${this.id} is ready`);
@@ -106,7 +110,26 @@ export class Motor extends EventEmitter   {
    * Handles any process messages
    */
   handleProcessMessage(msg) {
+    const buff = msg.data
 
+    if(buff[0] == 0xE0){
+      const motorError = buff[1];
+      const adcError = buff[2];
+      const rebelError = buff[3];
+      const controlError = buff[4];
+      if( motorError || adcError || rebelError || controlError ){
+        logger(`Error`, buff[1], buff[2], buff[3], buff[4]);
+      }
+    }
+
+  }
+
+
+  handleEnvironmentalMessage(msg){
+    const buff = msg.data;
+    this.voltage = buff.readUIntBE(2,2);
+    this.tempMotor = buff.readUIntBE(4,2);
+    this.tempBoard = buff.readUIntBE(6,2);
   }
 
   /** ---------------------------------
@@ -185,13 +208,15 @@ export class Motor extends EventEmitter   {
     }
 
     // generate the pos in encoder tics instead of degrees
-    const pos = (this.gearZero + this.jointPositionSetPoint) * this.gearScale; 
+    const pos = Math.abs( (this.gearZero + this.jointPositionSetPoint) * this.gearScale); 
 
     // Update the timestamp keeping it between 0-255 
     this.timeStamp = this.timeStamp === 255 ? 0 : this.timeStamp + 1;
     
     // Create buffer for data
     const buff = Buffer.alloc(8)
+
+    console.log('POS', pos);
 
     // Set data 
     buff[0] = 0x14;                                           // First byte denominates the command, here: set joint position
@@ -200,7 +225,7 @@ export class Motor extends EventEmitter   {
     buff[6] = this.timeStamp;                                 // Time stamp (not used)
     buff[7] = 0;                                              // Digital out for this module, binary coded
   
-    console.log(buff, 'revs:', revs, ' speed:', speed)
+    //console.log(buff, 'pos:', pos)
 
     // Create our output frame
     const out = {
@@ -257,7 +282,7 @@ export class Motor extends EventEmitter   {
       this.channel.send(out); // Send second frame
       // Wait 5 ms
       setTimeout(() =>{
-        this.stopped = false; // Re enable sending pos updates
+        //this.stopped = false; // Re enable sending pos updates
       }, 5);
     }, 1)
 
@@ -360,6 +385,9 @@ export class Motor extends EventEmitter   {
       motorCurrent: this.motorCurrent,
       errorCode: this.errorCode,
       errorCodeString: this.errorCodeString ?? 'n/a',
+      voltage: this.voltage,
+      tempMotor: this.tempMotor,
+      tempBoard: this.tempBoard
     }
   }
 
