@@ -116,6 +116,28 @@ export class Robot extends EventEmitter   {
   }
 
   /** ---------------------------------
+   * Will disable the specified motor
+   * 
+   * @param {*} id  
+   */
+  disableMotor(id){
+    logger(`disableMotor ${id}`);
+    this.motorMap[id].disable()
+  }
+
+  /** ---------------------------------
+   * Will calibrate the specified motor
+   * 
+   * @param {*} id  
+   */
+  calibrateMotor(id){
+    logger(`calibrateMotor ${id}`);
+    this.motorMap[id].calibrate()
+  }
+
+
+
+  /** ---------------------------------
    * Will home all the motors
    */
   home(){

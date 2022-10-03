@@ -119,6 +119,10 @@ export class Motor extends EventEmitter   {
       const controlError = buff[4];
       if( motorError || adcError || rebelError || controlError ){
         logger(`Error`, buff[1], buff[2], buff[3], buff[4]);
+        this.motorError = motorError;
+        this.adcError = adcError;
+        this.rebelError = rebelError;
+        this.controlError = controlError;
       }
     }
 
@@ -159,7 +163,7 @@ export class Motor extends EventEmitter   {
 
     let result = '';
     for( let i = 0; i < 8; i++ ){ 
-      if(decoded[i]){
+      if(decoded[i] != '0'){
         result += `${codes[i]},`
       }
     }
@@ -208,7 +212,8 @@ export class Motor extends EventEmitter   {
     }
 
     // generate the pos in encoder tics instead of degrees
-    const pos = Math.abs( (this.gearZero + this.jointPositionSetPoint) * this.gearScale); 
+    //const pos = Math.abs( (this.gearZero + this.jointPositionSetPoint) * this.gearScale); 
+    const pos = 0;
 
     // Update the timestamp keeping it between 0-255 
     this.timeStamp = this.timeStamp === 255 ? 0 : this.timeStamp + 1;
@@ -289,6 +294,47 @@ export class Motor extends EventEmitter   {
   }
 
   /** ---------------------------------
+   * Will calibrate the motor ( for rotor orientation )
+   */
+  calibrate() {
+    logger(`calibrating motor with id ${this.id}`);
+
+    // We are starting to home
+    this.emit('calibrating');
+
+    // Create buffer for data
+    const buff = Buffer.alloc(8)
+
+    buff[0] = 0x01;
+    buff[1] = 0x0C;
+    buff[2] = 0x00;
+    buff[3] = 0x00;
+
+    // Stop sending pos updates
+    this.stopped = true;
+    
+    // Create our output frame
+    const out = {
+      id: this.id,
+      data: buff
+    };
+
+    // Send first frame
+    this.channel.send(out);
+
+    // Wait 1 ms
+    setTimeout(() => {
+      this.channel.send(out); // Send second frame
+      // Wait 5 ms
+      setTimeout(() =>{
+        //this.stopped = false; // Re enable sending pos updates
+      }, 5);
+    }, 1)
+
+  }
+
+
+  /** ---------------------------------
    * Enable the Motor
    * The Motor has to be in 0x04 or 00000100 = MNE Motor not enabled state.
    * This is the state after "reset"
@@ -327,11 +373,50 @@ export class Motor extends EventEmitter   {
     
       // Wait 5 ms
       setTimeout(() => {
-        this.stopped = false; // Re enable sending pos updates
+        //this.stopped = false; // Re enable sending pos updates
         this.emit('enabled');
       }, 5)
     }
   }
+
+  /** ---------------------------------
+   * Disable the Motor
+   * 
+   */
+  disable() {
+
+    logger(`disabling motor with id ${this.id}`);
+
+
+      // Protocol: 0x01 0x09 to enable a joint
+      //           0x01 0x0A to disable a joint
+
+      // Create buffer for data
+      const buff = Buffer.alloc(8)
+
+      buff[0] = 0x01;
+      buff[1] = 0x0A;
+
+      // Stop sending pos updates
+      this.stopped = true; 
+
+      // Create our output frame
+      const out = {
+        id: this.id,
+        data: buff
+      };
+
+      // Send frame
+      this.channel.send(out);
+
+      this.stopped = true;
+    
+      // Wait 5 ms
+      setTimeout(() => {
+        this.emit('disabled');
+      }, 5)
+  }
+
 
   /** ---------------------------------
    * Resets the errors of the joint module. Error will be 0x04 afterwards (motors not enabled)
@@ -364,7 +449,7 @@ export class Motor extends EventEmitter   {
   
     // Wait 5 ms
     setTimeout(() => {
-      this.stopped = false; // Re enable sending pos updates
+      //this.stopped = false; // Re enable sending pos updates
       this.emit('reset');
     }, 5)
     
@@ -387,7 +472,11 @@ export class Motor extends EventEmitter   {
       errorCodeString: this.errorCodeString ?? 'n/a',
       voltage: this.voltage,
       tempMotor: this.tempMotor,
-      tempBoard: this.tempBoard
+      tempBoard: this.tempBoard,
+      motorError: this.motorError,
+      adcError: this.adcError,
+      rebelError: this.rebelError,
+      controlError: this.controlError
     }
   }
 

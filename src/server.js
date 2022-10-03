@@ -73,6 +73,18 @@ export const startServer = (config) => {
     robot.enableMotor(id);
   });
 
+  socket.on('motorDisable', (id) => {
+    logger(`controller says disableMotor ${id}`);
+    robot.disableMotor(id);
+  });
+
+  socket.on('motorCalibrate', (id) => {
+    logger(`controller says calibrateMotor ${id}`);
+    robot.calibrateMotor(id);
+  });
+
+
+
   socket.on('motorHome', (id) => {
     logger(`controller says motorHome ${id}`);
     robot.homeMotor(id);
