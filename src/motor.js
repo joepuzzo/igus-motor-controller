@@ -369,7 +369,7 @@ export class Motor extends EventEmitter   {
 
     logger(`enabling motor with id ${this.id} error code is currently ${dec2bin(this.errorCode)}`);
 
-    if( dec2bin(this.errorCode)[5] == '1' ){
+    if( dec2bin(this.errorCode)[5] != '1' ){
       const errorMessage = `Error: Please reset ${this.id} before enabling`
       logger(errorMessage);
       //this.emit('error', errorMessage);
@@ -455,6 +455,10 @@ export class Motor extends EventEmitter   {
     // Stop sending pos updates
     this.stopped = true; 
 
+    // Clear error code
+    this.errorCode = 0;
+    this.errorCodeString = "n/a";
+
     // First we set our set point to where we are ( in degrees )
     this.jointPositionSetPoint = this.currentPosition;
    
@@ -477,7 +481,7 @@ export class Motor extends EventEmitter   {
   
     // Wait 5 ms
     setTimeout(() => {
-      //this.stopped = false; // Re enable sending pos updates
+      this.stopped = false; // Re enable sending pos updates
       this.emit('reset');
     }, 5)
     
