@@ -136,6 +136,15 @@ export class Robot extends EventEmitter   {
   }
 
 
+  /** ---------------------------------
+   * Will request pos and error update
+   * 
+   * @param {*} id  
+   */
+  queryMotorPosition(id){
+    logger(`queryMotorPosition ${id}`);
+    this.motorMap[id].queryPosition();
+  }
 
   /** ---------------------------------
    * Will home all the motors

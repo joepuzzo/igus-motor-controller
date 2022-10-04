@@ -481,7 +481,7 @@ export class Motor extends EventEmitter   {
   
     // Wait 5 ms
     setTimeout(() => {
-      this.stopped = false; // Re enable sending pos updates
+      //this.stopped = false; // Re enable sending pos updates
       this.emit('reset');
     }, 5)
     
