@@ -524,6 +524,30 @@ export class Motor extends EventEmitter   {
       this.channel.send(out);
   }
 
+  /** ---------------------------------
+   * queryParameter of the Motor
+   *  
+   */
+   queryParameter(index, subindex) {
+      logger(`query parameter ${this.id} index ${index} subindex ${subindex}`);
+
+      // Create buffer for data
+      const buff = Buffer.alloc(8)
+
+      // Set data 
+      buff[0] = 0x96;                                           // First byte denominates the command, here: Read parameters 0x96
+      buff[1] = index;                                          // Index
+      buff[2] = subindex;                                       // SubIndex
+    
+      // Create our output frame
+      const out = {
+        id: this.id,
+        data: buff
+      };
+
+      // Send frame
+      this.channel.send(out);
+  }
 
   /** ---------------------------------
    * Will get the current joint state 

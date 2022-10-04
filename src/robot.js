@@ -147,6 +147,16 @@ export class Robot extends EventEmitter   {
   }
 
   /** ---------------------------------
+   * Will request for parameter
+   * 
+   * @param {*} id  
+   */
+  queryMotorParamter(id, index, subindex){
+    logger(`queryMotorParamter ${id} index ${index} subindex ${subindex}`);
+    this.motorMap[id].queryParameter(index, subindex);
+  }
+
+  /** ---------------------------------
    * Will home all the motors
    */
   home(){
