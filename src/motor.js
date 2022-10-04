@@ -52,6 +52,7 @@ export class Motor extends EventEmitter   {
     this.stopped = true;              // will disable position sends
     this.robotStopped = false;        // the motor might stop things but the robot might also have stop set
     this.gearZero = 0;                // zero pos for gear
+    this.encoderPulsePosition = null; // the current joint position in degrees sent by the heartbeat from motor 
 
     // Our can channel
     this.channel = channel;
@@ -112,6 +113,7 @@ export class Motor extends EventEmitter   {
   handleProcessMessage(msg) {
     const buff = msg.data
 
+    // Error pulse message ( sent every second )
     if(buff[0] == 0xE0){
       const motorError = buff[1];
       const adcError = buff[2];
@@ -124,7 +126,27 @@ export class Motor extends EventEmitter   {
         this.rebelError = rebelError;
         this.controlError = controlError;
       }
+    } 
+
+    if(buff[0] == 0xEF){
+
+      // Position of the output drive in deg / 100
+      const pos = buff.readUIntBE(4, 4); // TODO might need this? .toString(10); 
+
+      //this.currentPosition = (pos - this.gearZero) / this.gearScale;
+      const inDegrees = pos / 100;
+
+      if( this.encoderPulsePosition == null ){
+        // First time so initialize the current pos to this
+        this.currentPosition = inDegrees;
+      }
+      
+      // Now update this value every time
+      this.encoderPulsePosition = inDegrees;
+
     }
+
+
 
   }
 
@@ -196,6 +218,8 @@ export class Motor extends EventEmitter   {
     // Example: 2.25 °/tic * 0.3 = 0.675 °/tic
     const movement = rate * this.motionScale; 
 
+    //console.log('Movement', movement);
+
     // If we are not at our goal pos keep moving forward by the movement
     //
     // Example: goalPosition = 45  currentPosition = -45 
@@ -208,12 +232,13 @@ export class Motor extends EventEmitter   {
       // note: we may have case where we are going from 45 to 40 where the dif is 40 - 45 ===> -5
       // in this case we want to go other direction
       const neg = this.goalPosition < this.currentPosition;
-      this.jointPositionSetPoint = this.jointPositionSetPoint + ( neg ? -movement : movement);  // TODO maybe this should use this.currentPosition + movement ?? 
+      //this.jointPositionSetPoint = this.jointPositionSetPoint + ( neg ? -movement : movement);  // TODO maybe this should use this.currentPosition + movement ?? 
+      this.jointPositionSetPoint = this.currentPosition + ( neg ? -movement : movement);
     }
 
     // generate the pos in encoder tics instead of degrees
-    //const pos = Math.abs( (this.gearZero + this.jointPositionSetPoint) * this.gearScale); 
-    const pos = 0;
+    const pos = Math.abs( (this.gearZero + this.jointPositionSetPoint) * this.gearScale); 
+    //const pos = this.currentPosition / 100; // I tried to set the exact pos because I thought issue might be lag ... no
 
     // Update the timestamp keeping it between 0-255 
     this.timeStamp = this.timeStamp === 255 ? 0 : this.timeStamp + 1;
@@ -342,12 +367,12 @@ export class Motor extends EventEmitter   {
    */
   enable() {
 
-    logger(`enabling motor with id ${this.id}`);
+    logger(`enabling motor with id ${this.id} error code is currently ${dec2bin(this.errorCode)}`);
 
-    if( !dec2bin(this.errorCode)[5] ){
-      const errorMessage = `Error: Please reset ${id} before enabling`
+    if( dec2bin(this.errorCode)[5] == '1' ){
+      const errorMessage = `Error: Please reset ${this.id} before enabling`
       logger(errorMessage);
-      this.emit('error', errorMessage);
+      //this.emit('error', errorMessage);
     } else { 
 
       // Protocol: 0x01 0x09 to enable a joint
@@ -373,7 +398,7 @@ export class Motor extends EventEmitter   {
     
       // Wait 5 ms
       setTimeout(() => {
-        //this.stopped = false; // Re enable sending pos updates
+        this.stopped = false; // Re enable sending pos updates
         this.emit('enabled');
       }, 5)
     }
@@ -426,6 +451,12 @@ export class Motor extends EventEmitter   {
   reset() {
 
     logger(`resetting errors for motor with id ${this.id}`);
+
+    // Stop sending pos updates
+    this.stopped = true; 
+
+    // First we set our set point to where we are ( in degrees )
+    this.jointPositionSetPoint = this.currentPosition;
    
     // Protocol: 0x01 0x06 
 
@@ -433,10 +464,7 @@ export class Motor extends EventEmitter   {
     const buff = Buffer.alloc(8)
 
     buff[0] = 0x01;
-    buff[1] = 0x06;
-
-    // Stop sending pos updates
-    this.stopped = true; 
+    buff[1] = 0x06; 
 
     // Create our output frame
     const out = {
@@ -464,6 +492,7 @@ export class Motor extends EventEmitter   {
   get state(){
     return {
       id: this.id,
+      encoderPulsePosition: this.encoderPulsePosition,
       currentPosition: this.currentPosition,
       jointPositionSetPoint: this.jointPositionSetPoint,
       goalPosition: this.goalPosition,
