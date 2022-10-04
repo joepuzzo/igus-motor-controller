@@ -81,7 +81,7 @@ export class Motor extends EventEmitter   {
     });
 
     // Enable the motor
-    //this.stopped = false;
+    this.stopped = false;
 
     // We are ready
     logger(`motor with id ${this.id} is ready`);
@@ -99,7 +99,7 @@ export class Motor extends EventEmitter   {
     // err pos0 pos1 pos2 pos3 currentH currentL din 
     this.errorCode = buff[0];
     this.errorCodeString = this.decodeError(this.errorCode);
-    const pos = buff.readUIntBE(1, 4); // TODO might need this? .toString(10); 
+    const pos = buff.readIntBE(1, 4); // TODO might need this? .toString(10); 
 
     this.currentPosition = (pos - this.gearZero) / this.gearScale;
     this.motorCurrent = buff[6];
@@ -131,7 +131,7 @@ export class Motor extends EventEmitter   {
     if(buff[0] == 0xEF){
 
       // Position of the output drive in deg / 100
-      const pos = buff.readUIntBE(4, 4); // TODO might need this? .toString(10); 
+      const pos = buff.readIntBE(4, 4); // TODO might need this? .toString(10); 
 
       //this.currentPosition = (pos - this.gearZero) / this.gearScale;
       const inDegrees = pos / 100;
@@ -139,6 +139,7 @@ export class Motor extends EventEmitter   {
       if( this.encoderPulsePosition == null ){
         // First time so initialize the current pos to this
         this.currentPosition = inDegrees;
+        //this.stopped = false;
       }
       
       // Now update this value every time
@@ -226,7 +227,7 @@ export class Motor extends EventEmitter   {
     // goalPosition - currentPosition = 45 - ( -45 ) = 90 ... i.e we still have 90 deg to move!
     // we use a tolerance because the world is not perfect
     const tolerance = 0.05;
-    if( Math.abs(this.goalPosition - this.currentPosition) > tolerance ){ 
+    if( Math.abs(this.goalPosition - this.currentPosition) > tolerance){ 
       // basically we are increasing the goal degs by our movement segments
       // 
       // note: we may have case where we are going from 45 to 40 where the dif is 40 - 45 ===> -5
@@ -237,8 +238,10 @@ export class Motor extends EventEmitter   {
     }
 
     // generate the pos in encoder tics instead of degrees
-    const pos = Math.abs( (this.gearZero + this.jointPositionSetPoint) * this.gearScale); 
-    //const pos = this.currentPosition / 100; // I tried to set the exact pos because I thought issue might be lag ... no
+    //const pos = (this.gearZero + this.jointPositionSetPoint) * this.gearScale; 
+    const pos = this.currentPosition * this.gearScale; // I tried to set the exact pos because I thought issue might be lag ... no
+    
+    //const pos = 0;
 
     // Update the timestamp keeping it between 0-255 
     this.timeStamp = this.timeStamp === 255 ? 0 : this.timeStamp + 1;
@@ -251,7 +254,7 @@ export class Motor extends EventEmitter   {
     // Set data 
     buff[0] = 0x14;                                           // First byte denominates the command, here: set joint position
     buff[1] = 0x00;                                           // Velocity, not used
-    buff.writeUIntBE(pos, 2, 4)                               // Write the position to the data 
+    buff.writeIntBE(pos, 2, 4)                                // Write the position to the data 
     buff[6] = this.timeStamp;                                 // Time stamp (not used)
     buff[7] = 0;                                              // Digital out for this module, binary coded
   
@@ -312,7 +315,7 @@ export class Motor extends EventEmitter   {
       this.channel.send(out); // Send second frame
       // Wait 5 ms
       setTimeout(() =>{
-        //this.stopped = false; // Re enable sending pos updates
+        this.stopped = false; // Re enable sending pos updates
       }, 5);
     }, 1)
 
@@ -480,7 +483,7 @@ export class Motor extends EventEmitter   {
   
     // Wait 5 ms
     setTimeout(() => {
-      //this.stopped = false; // Re enable sending pos updates
+      this.stopped = false; // Re enable sending pos updates
       this.emit('reset');
     }, 5)
     
@@ -507,7 +510,7 @@ export class Motor extends EventEmitter   {
       // Set data 
       buff[0] = 0x14;                                           // First byte denominates the command, here: set joint position
       buff[1] = 0x00;                                           // Velocity, not used
-      buff.writeUIntBE(posInTics, 2, 4)                         // Write the position to the data 
+      buff.writeIntBE(posInTics, 2, 4)                          // Write the position to the data 
       buff[6] = this.timeStamp;                                 // Time stamp
       buff[7] = 0;                                              // Digital out for this module, binary coded
     
