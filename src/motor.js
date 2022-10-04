@@ -501,6 +501,9 @@ export class Motor extends EventEmitter   {
       // Update the time stamp
       this.timeStamp = this.timeStamp === 255 ? 0 : this.timeStamp + 1;
 
+      // Create buffer for data
+      const buff = Buffer.alloc(8)
+
       // Set data 
       buff[0] = 0x14;                                           // First byte denominates the command, here: set joint position
       buff[1] = 0x00;                                           // Velocity, not used
