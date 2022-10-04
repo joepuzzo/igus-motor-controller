@@ -83,7 +83,10 @@ export const startServer = (config) => {
     robot.calibrateMotor(id);
   });
 
-
+  socket.on('queryMotorPosition', (id) => {
+    logger(`controller says queryMotorPosition ${id}`);
+    robot.queryMotorPosition(id);
+  });
 
   socket.on('motorHome', (id) => {
     logger(`controller says motorHome ${id}`);

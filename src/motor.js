@@ -442,7 +442,6 @@ export class Motor extends EventEmitter   {
       }, 5)
   }
 
-
   /** ---------------------------------
    * Resets the errors of the joint module. Error will be 0x04 afterwards (motors not enabled)
    * You need to enable the motors afterwards to get the robot in running state (0x00)
@@ -485,6 +484,38 @@ export class Motor extends EventEmitter   {
       this.emit('reset');
     }, 5)
     
+  }
+
+   /** ---------------------------------
+   * queryPosition of the Motor
+   * 
+   * If the axis is not enabled the Position Cmd 0x14 can be used to query the current position and error code
+   * 
+   */
+  queryPosition() {
+      logger(`querying pos for motor with id ${this.id}`);
+
+      // get pos in tics
+      const posInTics = this.gearScale * this.currentPosition;
+
+      // Update the time stamp
+      this.timeStamp = this.timeStamp === 255 ? 0 : this.timeStamp + 1;
+
+      // Set data 
+      buff[0] = 0x14;                                           // First byte denominates the command, here: set joint position
+      buff[1] = 0x00;                                           // Velocity, not used
+      buff.writeUIntBE(posInTics, 2, 4)                         // Write the position to the data 
+      buff[6] = this.timeStamp;                                 // Time stamp
+      buff[7] = 0;                                              // Digital out for this module, binary coded
+    
+      // Create our output frame
+      const out = {
+        id: this.id,
+        data: buff
+      };
+
+      // Send frame
+      this.channel.send(out);
   }
 
 
