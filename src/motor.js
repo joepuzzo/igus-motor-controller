@@ -53,6 +53,8 @@ export class Motor extends EventEmitter   {
     this.robotStopped = false;        // the motor might stop things but the robot might also have stop set
     this.gearZero = 0;                // zero pos for gear
     this.encoderPulsePosition = null; // the current joint position in degrees sent by the heartbeat from motor 
+    this.encoderPulseTics = null;
+    this.currentTics = 0;
 
     // Our can channel
     this.channel = channel;
@@ -104,7 +106,7 @@ export class Motor extends EventEmitter   {
     this.currentPosition = (pos - this.gearZero) / this.gearScale;
     this.motorCurrent = buff[6];
     this.digitalIn = buff[7]; // TODO split this down into its parts like we do with error
-     
+    this.currentTics = pos;
   }
 
   /** ---------------------------------
@@ -133,21 +135,19 @@ export class Motor extends EventEmitter   {
       // Position of the output drive in deg / 100
       const pos = buff.readIntBE(4, 4); // TODO might need this? .toString(10); 
 
-      //this.currentPosition = (pos - this.gearZero) / this.gearScale;
       const inDegrees = pos / 100;
 
       if( this.encoderPulsePosition == null ){
         // First time so initialize the current pos to this
         this.currentPosition = inDegrees;
+				this.currentTics = pos;
         //this.stopped = false;
       }
       
       // Now update this value every time
       this.encoderPulsePosition = inDegrees;
-
+      this.encoderPulseTics = pos;
     }
-
-
 
   }
 
@@ -535,6 +535,8 @@ export class Motor extends EventEmitter   {
       id: this.id,
       encoderPulsePosition: this.encoderPulsePosition,
       currentPosition: this.currentPosition,
+      encoderPulseTics: this.encoderPulseTics,
+      currentTics: this.currentTics,
       jointPositionSetPoint: this.jointPositionSetPoint,
       goalPosition: this.goalPosition,
       motorCurrent: this.motorCurrent,
