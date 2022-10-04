@@ -88,7 +88,7 @@ export const startServer = (config) => {
     robot.queryMotorPosition(id);
   });
 
-  socket.on('queryMotorParamter', (id, index, subindex) => {
+  socket.on('queryMotorParameter', (id, index, subindex) => {
     logger(`controller says queryMotorParameter for motor ${id} index ${index} subindex ${subindex}`);
     robot.queryMotorParamter(id, index, subindex);
   });

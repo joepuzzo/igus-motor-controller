@@ -46,6 +46,7 @@ export class Motor extends EventEmitter   {
     this.id = id;
     this.cycleTime = 50;              // in ms
     this.gearScale = 1031.11;         // scale for iugs Rebel joint   
+    this.encoderTics = 7424;					// tics per revolution
     this.maxVelocity = 45.0;          // degree / sec
     this.velocity = this.maxVelocity; // Initial velocity is max
     this.motionScale = 0.3;           // Scales the motion velocity
@@ -109,7 +110,7 @@ export class Motor extends EventEmitter   {
     const buff = msg.data
 
     // Special case for parameter read event
-    if( buff[0] = 0x96 ){
+    if( buff[0] == 0x96 ){
       const index = buff[1];
       const subindex = buff[2];
       const data = buff.readIntBE(3,4);
@@ -122,7 +123,8 @@ export class Motor extends EventEmitter   {
       this.errorCodeString = this.decodeError(this.errorCode);
       const pos = buff.readIntBE(1, 4); // TODO might need this? .toString(10); 
 
-      this.currentPosition = (pos - this.gearZero) / this.gearScale;
+      //this.currentPosition = (pos - this.gearZero) / this.gearScale;
+      this.currentPosition = ( 360 / this.encoderTics ) * pos;
       this.motorCurrent = buff[6];
       this.digitalIn = buff[7]; // TODO split this down into its parts like we do with error
       this.currentTics = pos;
@@ -153,9 +155,10 @@ export class Motor extends EventEmitter   {
     if(buff[0] == 0xEF){
 
       // Position of the output drive in deg / 100
-      const pos = buff.readIntBE(4, 4); // TODO might need this? .toString(10); 
+      let pos = buff.readIntBE(4, 4); // TODO might need this? .toString(10); 
+      pos = pos * 10;
 
-      const inDegrees = pos / 100;
+      const inDegrees = ( 360 / this.encoderTics) * pos;
 
       if( this.encoderPulsePosition == null ){
         // First time so initialize the current pos to this
@@ -259,7 +262,9 @@ export class Motor extends EventEmitter   {
 
     // generate the pos in encoder tics instead of degrees
     //const pos = (this.gearZero + this.jointPositionSetPoint) * this.gearScale; 
-    const pos = this.currentPosition * this.gearScale; // I tried to set the exact pos because I thought issue might be lag ... no
+
+		// Convert current pos ( degrees ) into encoder tics 
+	  const pos = this.currentPosition / ( 360 / this.encoderTics ); // TODO this currently just sets it to what it is because its not working so thats what im trying
     
     //const pos = 0;
 
@@ -519,7 +524,8 @@ export class Motor extends EventEmitter   {
       logger(`querying pos for motor with id ${this.id}`);
 
       // get pos in tics
-      const posInTics = this.gearScale * this.currentPosition;
+      //const posInTics = this.gearScale * this.currentPosition;
+      const posInTics = this.currentPosition / ( 360 / this.encoderTics );
 
       // Update the time stamp
       this.timeStamp = this.timeStamp === 255 ? 0 : this.timeStamp + 1;
