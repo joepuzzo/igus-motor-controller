@@ -7,6 +7,15 @@ const logger = Debug('igus:motor' + '\t');
 // Error codes 
 const codes = ['OC', 'DRV', 'ENC', 'LAG', 'COM', 'MNE', 'ESTOP', 'TEMP'];
 
+// Parameter index mapping
+const parameterMapping = ['board', 'motor', 'axis', 'control'];
+
+// Parameter subindex mapping
+const subindexMapping = {
+  board: ['serialNo', 'firmwareversion', 'hardwareNo', 'minVoltage', 'maxTemp'],
+  motor: ['encoderTics', 'poleParis', null, null, 'maxRpm', 'maxTemp', 'maxCurrent', 'startUpMethod', null, 'encoderInverted']
+}
+
 // Helper
 function dec2bin(dec) {
   // dec = 26 
@@ -55,6 +64,7 @@ export class Motor extends EventEmitter   {
     this.encoderPulsePosition = null; // the current joint position in degrees sent by the heartbeat from motor 
     this.encoderPulseTics = null;
     this.currentTics = 0;
+    this.parameters = { board: {}, motor: {}, axis: {}, control: {} };             // A place to store any read parameters 
 
     // Our can channel
     this.channel = channel;
@@ -98,15 +108,25 @@ export class Motor extends EventEmitter   {
     // get the buffer
     const buff = msg.data
 
-    // err pos0 pos1 pos2 pos3 currentH currentL din 
-    this.errorCode = buff[0];
-    this.errorCodeString = this.decodeError(this.errorCode);
-    const pos = buff.readIntBE(1, 4); // TODO might need this? .toString(10); 
+    // Special case for parameter read event
+    if( buff[0] = 0x96 ){
+      const index = buff[1];
+      const subindex = buff[2];
+      const data = buff.readIntBE(3,4);
+      const section = parameterMapping[index];
+      const parameter = subindexMapping[section][subindex];
+      this.parameters[section][parameter] = data;
+    } else { 
+      // err pos0 pos1 pos2 pos3 currentH currentL din 
+      this.errorCode = buff[0];
+      this.errorCodeString = this.decodeError(this.errorCode);
+      const pos = buff.readIntBE(1, 4); // TODO might need this? .toString(10); 
 
-    this.currentPosition = (pos - this.gearZero) / this.gearScale;
-    this.motorCurrent = buff[6];
-    this.digitalIn = buff[7]; // TODO split this down into its parts like we do with error
-    this.currentTics = pos;
+      this.currentPosition = (pos - this.gearZero) / this.gearScale;
+      this.motorCurrent = buff[6];
+      this.digitalIn = buff[7]; // TODO split this down into its parts like we do with error
+      this.currentTics = pos;
+    }
   }
 
   /** ---------------------------------
@@ -572,7 +592,8 @@ export class Motor extends EventEmitter   {
       motorError: this.motorError,
       adcError: this.adcError,
       rebelError: this.rebelError,
-      controlError: this.controlError
+      controlError: this.controlError,
+      parameters: this.parameters
     }
   }
 
