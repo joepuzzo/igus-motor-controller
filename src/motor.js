@@ -159,7 +159,7 @@ export class Motor extends EventEmitter   {
       let pos = buff.readIntBE(4, 4); // TODO might need this? .toString(10); 
       pos = pos * 10;
 
-      const inDegrees = ( 360 / this.encoderTics) * pos;
+      const inDegrees = pos / this.gearScale; //( 360 / this.encoderTics) * pos;
 
       if( this.encoderPulsePosition == null ){
         // First time so initialize the current pos to this
