@@ -50,7 +50,7 @@ export class Motor extends EventEmitter   {
     this.encoderTics = 7424;					// tics per revolution
     this.maxVelocity = 45.0;          // degree / sec
     this.velocity = this.maxVelocity; // Initial velocity is max
-    this.motionScale = 0.5;           // Scales the motion velocity
+    this.motionScale = 1;           // Scales the motion velocity
     this.digitalOut = 0;              // the wanted digital out channels
     this.digitalIn = 0;               // the current digital int channels
     this.goalPosition = 0;            // The joint goal position in degrees
@@ -250,17 +250,17 @@ export class Motor extends EventEmitter   {
     // Example: goalPosition = 45  currentPosition = -45 
     // goalPosition - currentPosition = 45 - ( -45 ) = 90 ... i.e we still have 90 deg to move!
     // we use a tolerance because the world is not perfect
-    const tolerance = 1;
-
-		// if we went past our goal
-		const past = this.backwards ? this.currentPosition < this.goalPosition : this.currentPositon > this.goalPosition;
+    const tolerance = 2;
 
     if( Math.abs(this.goalPosition - this.currentPosition) > tolerance ){ 
       // basically we are increasing the goal degs by our movement segments
       // 
       // note: we may have case where we are going from 45 to 40 where the dif is 40 - 45 ===> -5
       // in this case we want to go other direction
+
       const neg = this.goalPosition < this.currentPosition;
+      //const neg = this.backwards;
+
       //this.jointPositionSetPoint = this.jointPositionSetPoint + ( neg ? -movement : movement);  // TODO maybe this should use this.currentPosition + movement ?? 
       this.jointPositionSetPoint = ( this.currentPosition + ( neg ? -movement : movement) );
     }
@@ -606,6 +606,7 @@ export class Motor extends EventEmitter   {
       voltage: this.voltage,
       tempMotor: this.tempMotor,
       tempBoard: this.tempBoard,
+      direction: this.backwards ? 'backwards' : 'forwards',
       motorError: this.motorError,
       adcError: this.adcError,
       rebelError: this.rebelError,
