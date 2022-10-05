@@ -48,9 +48,9 @@ export class Motor extends EventEmitter   {
     this.cycleTime = 50;              // in ms
     this.gearScale = 1031.11;         // scale for iugs Rebel joint   
     this.encoderTics = 7424;					// tics per revolution
-    this.maxVelocity = 45.0;          // degree / sec
+    this.maxVelocity = 65;            // degree / sec
     this.velocity = this.maxVelocity; // Initial velocity is max
-    this.motionScale = 1;           // Scales the motion velocity
+    this.motionScale = 1;             // Scales the motion velocity
     this.digitalOut = 0;              // the wanted digital out channels
     this.digitalIn = 0;               // the current digital int channels
     this.goalPosition = 0;            // The joint goal position in degrees
@@ -254,25 +254,17 @@ export class Motor extends EventEmitter   {
 
     if( Math.abs(this.goalPosition - this.currentPosition) > tolerance ){ 
       // basically we are increasing the goal degs by our movement segments
-      // 
+      //
       // note: we may have case where we are going from 45 to 40 where the dif is 40 - 45 ===> -5
       // in this case we want to go other direction
 
       const neg = this.goalPosition < this.currentPosition;
-      //const neg = this.backwards;
 
-      //this.jointPositionSetPoint = this.jointPositionSetPoint + ( neg ? -movement : movement);  // TODO maybe this should use this.currentPosition + movement ?? 
-      this.jointPositionSetPoint = ( this.currentPosition + ( neg ? -movement : movement) );
+      this.jointPositionSetPoint = this.currentPosition + ( neg ? -movement : movement);
     }
 
     // generate the pos in encoder tics instead of degrees
     const pos = (this.gearZero + this.jointPositionSetPoint) * this.gearScale; 
-    //const pos = this.jointPositionSetPoint / ( 360 / this.encoderTics ) ;
-
-		// Convert current pos ( degrees ) into encoder tics 
-	  //const pos = this.currentPosition / ( 360 / this.encoderTics ); // TODO this currently just sets it to what it is because its not working so thats what im trying
-    
-    //const pos = 0;
     
     this.jointPositionSetTics = pos;
 
@@ -291,8 +283,6 @@ export class Motor extends EventEmitter   {
     buff[6] = this.timeStamp;                                 // Time stamp (not used)
     buff[7] = 0;                                              // Digital out for this module, binary coded
   
-    //console.log(buff, 'pos:', pos)
-
     // Create our output frame
     const out = {
       id: this.id,
