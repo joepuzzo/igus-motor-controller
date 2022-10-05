@@ -13,7 +13,8 @@ const parameterMapping = ['board', 'motor', 'axis', 'control'];
 // Parameter subindex mapping
 const subindexMapping = {
   board: ['serialNo', 'firmwareversion', 'hardwareNo', 'minVoltage', 'maxTemp'],
-  motor: ['encoderTics', 'poleParis', null, null, 'maxRpm', 'maxTemp', 'maxCurrent', 'startUpMethod', null, 'encoderInverted']
+  motor: ['encoderTics', 'poleParis', null, null, 'maxRpm', 'maxTemp', 'maxCurrent', 'startUpMethod', null, 'encoderInverted'],
+  axis: [null, 'referenceType', 'referenceOffset', 'referenceSpeed', 'referenceSpeedSlow', 'referenceSwitchType', 'maxPos', 'breakType'],
 }
 
 // Helper
@@ -54,6 +55,7 @@ export class Motor extends EventEmitter   {
     this.digitalIn = 0;               // the current digital int channels
     this.goalPosition = 0;            // The joint goal position in degrees
     this.currentPosition  = 0;        // the current joint positions in degree, loaded from the robot arm
+    this.currentTics = 0;             // the current position in tics loaded from motor 
     this.jointPositionSetPoint = 0;   // The set point is a periodicly updated goal point 
     this.timeStamp = 0;               // For message ordering 
     this.motorCurrent = 0;            // Motor current in mA
@@ -64,7 +66,6 @@ export class Motor extends EventEmitter   {
     this.gearZero = 0;                // zero pos for gear
     this.encoderPulsePosition = null; // the current joint position in degrees sent by the heartbeat from motor 
     this.encoderPulseTics = null;
-    this.currentTics = 0;
     this.parameters = { board: {}, motor: {}, axis: {}, control: {} };             // A place to store any read parameters 
 
     // Our can channel
@@ -125,9 +126,9 @@ export class Motor extends EventEmitter   {
 
       //this.currentPosition = (pos - this.gearZero) / this.gearScale;
       this.currentPosition = ( 360 / this.encoderTics ) * pos;
+      this.currentTics = pos;
       this.motorCurrent = buff[6];
       this.digitalIn = buff[7]; // TODO split this down into its parts like we do with error
-      this.currentTics = pos;
     }
   }
 
@@ -249,8 +250,12 @@ export class Motor extends EventEmitter   {
     // Example: goalPosition = 45  currentPosition = -45 
     // goalPosition - currentPosition = 45 - ( -45 ) = 90 ... i.e we still have 90 deg to move!
     // we use a tolerance because the world is not perfect
-    const tolerance = 0.05;
-    if( Math.abs(this.goalPosition - this.currentPosition) > tolerance){ 
+    const tolerance = 0.5;
+
+		// if we went past our goal
+		const past = this.backwards ? this.currentPosition < this.goalPosition : this.currentPositon > this.goalPosition;
+
+    if( Math.abs(this.goalPosition - this.currentPosition) > tolerance ){ 
       // basically we are increasing the goal degs by our movement segments
       // 
       // note: we may have case where we are going from 45 to 40 where the dif is 40 - 45 ===> -5
@@ -262,12 +267,14 @@ export class Motor extends EventEmitter   {
 
     // generate the pos in encoder tics instead of degrees
     //const pos = (this.gearZero + this.jointPositionSetPoint) * this.gearScale; 
-    //const pos = this.jointPositionSetPoint / ( 360 / this.encoderTics );
+    const pos = this.jointPositionSetPoint / ( 360 / this.encoderTics );
 
 		// Convert current pos ( degrees ) into encoder tics 
-	  const pos = this.currentPosition / ( 360 / this.encoderTics ); // TODO this currently just sets it to what it is because its not working so thats what im trying
+	  //const pos = this.currentPosition / ( 360 / this.encoderTics ); // TODO this currently just sets it to what it is because its not working so thats what im trying
     
     //const pos = 0;
+    
+    this.jointPositionSetTics = pos;
 
     // Update the timestamp keeping it between 0-255 
     this.timeStamp = this.timeStamp === 255 ? 0 : this.timeStamp + 1;
@@ -303,8 +310,10 @@ export class Motor extends EventEmitter   {
    * @param {number} [velocity] - velocity in degrees / sec
    */
   setPosition( position, velocity ) {
+    logger(`Set Pos to ${position} velocity ${velocity}`);
     this.velocity = velocity ?? this.velocity;
     this.goalPosition = position;
+    this.backwards = this.goalPosition < this.currentPosition;
   }
 
   /** ---------------------------------
@@ -589,6 +598,7 @@ export class Motor extends EventEmitter   {
       encoderPulsePosition: this.encoderPulsePosition,
       encoderPulseTics: this.encoderPulseTics,
       jointPositionSetPoint: this.jointPositionSetPoint,
+      jointPositionSetTics: this.jointPositionSetTics,
       goalPosition: this.goalPosition,
       motorCurrent: this.motorCurrent,
       errorCode: this.errorCode,
