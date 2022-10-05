@@ -50,7 +50,7 @@ export class Motor extends EventEmitter   {
     this.encoderTics = 7424;					// tics per revolution
     this.maxVelocity = 45.0;          // degree / sec
     this.velocity = this.maxVelocity; // Initial velocity is max
-    this.motionScale = 0.3;           // Scales the motion velocity
+    this.motionScale = 0.5;           // Scales the motion velocity
     this.digitalOut = 0;              // the wanted digital out channels
     this.digitalIn = 0;               // the current digital int channels
     this.goalPosition = 0;            // The joint goal position in degrees
@@ -124,8 +124,8 @@ export class Motor extends EventEmitter   {
       this.errorCodeString = this.decodeError(this.errorCode);
       const pos = buff.readIntBE(1, 4); // TODO might need this? .toString(10); 
 
-      //this.currentPosition = (pos - this.gearZero) / this.gearScale;
-      this.currentPosition = ( 360 / this.encoderTics ) * pos;
+      this.currentPosition = (pos - this.gearZero) / this.gearScale;
+      //this.currentPosition = ( 360 / this.encoderTics ) * pos;
       this.currentTics = pos;
       this.motorCurrent = buff[6];
       this.digitalIn = buff[7]; // TODO split this down into its parts like we do with error
@@ -250,7 +250,7 @@ export class Motor extends EventEmitter   {
     // Example: goalPosition = 45  currentPosition = -45 
     // goalPosition - currentPosition = 45 - ( -45 ) = 90 ... i.e we still have 90 deg to move!
     // we use a tolerance because the world is not perfect
-    const tolerance = 0.5;
+    const tolerance = 1;
 
 		// if we went past our goal
 		const past = this.backwards ? this.currentPosition < this.goalPosition : this.currentPositon > this.goalPosition;
@@ -262,12 +262,12 @@ export class Motor extends EventEmitter   {
       // in this case we want to go other direction
       const neg = this.goalPosition < this.currentPosition;
       //this.jointPositionSetPoint = this.jointPositionSetPoint + ( neg ? -movement : movement);  // TODO maybe this should use this.currentPosition + movement ?? 
-      this.jointPositionSetPoint = this.currentPosition + ( neg ? -movement : movement);
+      this.jointPositionSetPoint = ( this.currentPosition + ( neg ? -movement : movement) );
     }
 
     // generate the pos in encoder tics instead of degrees
-    //const pos = (this.gearZero + this.jointPositionSetPoint) * this.gearScale; 
-    const pos = this.jointPositionSetPoint / ( 360 / this.encoderTics );
+    const pos = (this.gearZero + this.jointPositionSetPoint) * this.gearScale; 
+    //const pos = this.jointPositionSetPoint / ( 360 / this.encoderTics ) ;
 
 		// Convert current pos ( degrees ) into encoder tics 
 	  //const pos = this.currentPosition / ( 360 / this.encoderTics ); // TODO this currently just sets it to what it is because its not working so thats what im trying
