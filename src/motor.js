@@ -94,7 +94,7 @@ export class Motor extends EventEmitter   {
     });
 
     // Enable the motor
-    this.stopped = false;
+    //this.stopped = false;
 
     // We are ready
     logger(`motor with id ${this.id} is ready`);
@@ -262,6 +262,7 @@ export class Motor extends EventEmitter   {
 
     // generate the pos in encoder tics instead of degrees
     //const pos = (this.gearZero + this.jointPositionSetPoint) * this.gearScale; 
+    //const pos = this.jointPositionSetPoint / ( 360 / this.encoderTics );
 
 		// Convert current pos ( degrees ) into encoder tics 
 	  const pos = this.currentPosition / ( 360 / this.encoderTics ); // TODO this currently just sets it to what it is because its not working so thats what im trying
@@ -316,7 +317,7 @@ export class Motor extends EventEmitter   {
     this.emit('homing');
 
     // Create buffer for data
-    const buff = Buffer.alloc(8)
+    const buff = Buffer.alloc(4)
 
     buff[0] = 0x01;
     buff[1] = 0x08;
@@ -380,7 +381,7 @@ export class Motor extends EventEmitter   {
       this.channel.send(out); // Send second frame
       // Wait 5 ms
       setTimeout(() =>{
-        //this.stopped = false; // Re enable sending pos updates
+        this.stopped = false; // Re enable sending pos updates
       }, 5);
     }, 1)
 
@@ -407,7 +408,7 @@ export class Motor extends EventEmitter   {
       //           0x01 0x0A to disable a joint
 
       // Create buffer for data
-      const buff = Buffer.alloc(8)
+      const buff = Buffer.alloc(2)
 
       buff[0] = 0x01;
       buff[1] = 0x09;
@@ -492,7 +493,7 @@ export class Motor extends EventEmitter   {
     // Protocol: 0x01 0x06 
 
     // Create buffer for data
-    const buff = Buffer.alloc(8)
+    const buff = Buffer.alloc(2)
 
     buff[0] = 0x01;
     buff[1] = 0x06; 
@@ -504,7 +505,7 @@ export class Motor extends EventEmitter   {
     };
 
     // Send frame
-    this.channel.send(out);
+    this.channel.send(out); 
   
     // Wait 5 ms
     setTimeout(() => {
@@ -583,10 +584,10 @@ export class Motor extends EventEmitter   {
   get state(){
     return {
       id: this.id,
-      encoderPulsePosition: this.encoderPulsePosition,
       currentPosition: this.currentPosition,
-      encoderPulseTics: this.encoderPulseTics,
       currentTics: this.currentTics,
+      encoderPulsePosition: this.encoderPulsePosition,
+      encoderPulseTics: this.encoderPulseTics,
       jointPositionSetPoint: this.jointPositionSetPoint,
       goalPosition: this.goalPosition,
       motorCurrent: this.motorCurrent,
