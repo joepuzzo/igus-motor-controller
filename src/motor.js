@@ -45,27 +45,30 @@ export class Motor extends EventEmitter   {
 
     // Define parameters
     this.id = id;
-    this.cycleTime = 50;              // in ms
-    this.gearScale = 1031.11;         // scale for iugs Rebel joint   
-    this.encoderTics = 7424;					// tics per revolution
-    this.maxVelocity = 65;            // degree / sec
-    this.velocity = this.maxVelocity; // Initial velocity is max
-    this.motionScale = 1;             // Scales the motion velocity
-    this.digitalOut = 0;              // the wanted digital out channels
-    this.digitalIn = 0;               // the current digital int channels
-    this.goalPosition = 0;            // The joint goal position in degrees
-    this.currentPosition  = 0;        // the current joint positions in degree, loaded from the robot arm
-    this.currentTics = 0;             // the current position in tics loaded from motor 
-    this.jointPositionSetPoint = 0;   // The set point is a periodicly updated goal point 
-    this.timeStamp = 0;               // For message ordering 
-    this.motorCurrent = 0;            // Motor current in mA
-    this.errorCode = 0;               // the error state of the joint module
-    this.errorCodeString;             // human readable error code for the joint module
-    this.stopped = true;              // will disable position sends
-    this.robotStopped = false;        // the motor might stop things but the robot might also have stop set
-    this.gearZero = 0;                // zero pos for gear
-    this.encoderPulsePosition = null; // the current joint position in degrees sent by the heartbeat from motor 
+    this.cycleTime = 50;                      // in ms
+    this.gearScale = 1031.11;                 // scale for iugs Rebel joint   
+    this.encoderTics = 7424;					        // tics per revolution
+    this.maxVelocity = 65;                    // degree / sec
+    this.velocity = this.maxVelocity;         // Initial velocity is max
+    this.currentVelocity = this.maxVelocity;  // the current velocity ( will grow and shrink based on acceleration )       
+    this.acceleration = 10;                   // The acceleration in degree / sec
+    this.motionScale = 1;                     // Scales the motion velocity
+    this.digitalOut = 0;                      // the wanted digital out channels
+    this.digitalIn = 0;                       // the current digital int channels
+    this.goalPosition = 0;                    // The joint goal position in degrees
+    this.currentPosition  = 0;                // the current joint positions in degree, loaded from the robot arm
+    this.currentTics = 0;                     // the current position in tics loaded from motor 
+    this.jointPositionSetPoint = 0;           // The set point is a periodicly updated goal point 
+    this.timeStamp = 0;                       // For message ordering 
+    this.motorCurrent = 0;                    // Motor current in mA
+    this.errorCode = 0;                       // the error state of the joint module
+    this.errorCodeString;                     // human readable error code for the joint module
+    this.stopped = true;                      // will disable position sends
+    this.robotStopped = false;                // the motor might stop things but the robot might also have stop set
+    this.gearZero = 0;                        // zero pos for gear
+    this.encoderPulsePosition = null;         // the current joint position in degrees sent by the heartbeat from motor 
     this.encoderPulseTics = null;
+    this.deccelAt = null;                     // If we are supposed to start decelerating at a specific point
     this.parameters = { board: {}, motor: {}, axis: {}, control: {} };             // A place to store any read parameters 
 
     // Our can channel
@@ -165,6 +168,8 @@ export class Motor extends EventEmitter   {
         // First time so initialize the current pos to this
         this.currentPosition = inDegrees;
 				this.currentTics = pos;
+        // Need to initialize the direction we will move to get to start goal ( 0 )
+        this.backwards = this.goalPosition < this.currentPosition;
         //this.stopped = false;
       }
       
@@ -229,21 +234,30 @@ export class Motor extends EventEmitter   {
       return;
     }
 
-    // write the setPoint command to the CAN bus
-    // CPRCANV2 protocol:
-    // 0x14 vel pos0 pos1 pos2 pos3 timer dout
-
     // first we need to compute our position
 
+    // Continue to accelerate if we need to
+    if( this.currentVelocity < this.velocity ){
+      // We want to accelerate and decelerate the motor over the course of its delta to goal
+      // acceleration is in °/s && there are 20 cycles in 1 second
+      // therefore we break acceleration down by 20, increasing by 1/20th every cycle 
+      this.currentVelocity = this.currentVelocity + ( this.acceleration / 20 );
+    } else { 
+      this.currentVelocity = this.velocity;
+    }
+
+    // Safety check, we don't want to go over set velocity
+    if( this.currentVelocity > this.velocity ){
+      this.currentVelocity = this.velocity;
+    }
+
     // vel ist in °/s so we need to break it down into our cycle segments
-    // Example: (50 / 1000 ) * 45 = 2.25 deg per tic
-    const rate  = (this.cycleTime / 1000.0) * this.velocity; 
+    // Example: (50 / 1000 ) * 45 = 2.25 deg per cycle
+    const rate  = (this.cycleTime / 1000.0) * this.currentVelocity; 
 
-    // Our motor cant nessisarily move 2.25 deg per 50 ms so we need to scale it down
-    // Example: 2.25 °/tic * 0.3 = 0.675 °/tic
+    // We might not want our motor to actually move at 2.25 deg per 50 ms so we can scale it down
+    // Example: 2.25 °/cycle * 0.3 = 0.675 °/cycle
     const movement = rate * this.motionScale; 
-
-    //console.log('Movement', movement);
 
     // If we are not at our goal pos keep moving forward by the movement
     //
@@ -253,6 +267,7 @@ export class Motor extends EventEmitter   {
     const tolerance = 2;
 
     if( Math.abs(this.goalPosition - this.currentPosition) > tolerance ){ 
+      
       // basically we are increasing the goal degs by our movement segments
       //
       // note: we may have case where we are going from 45 to 40 where the dif is 40 - 45 ===> -5
@@ -270,6 +285,10 @@ export class Motor extends EventEmitter   {
 
     // Update the timestamp keeping it between 0-255 
     this.timeStamp = this.timeStamp === 255 ? 0 : this.timeStamp + 1;
+
+    // write the setPoint command to the CAN bus
+    //
+    // 0x14 vel pos0 pos1 pos2 pos3 timer digital_out
     
     // Create buffer for data
     const buff = Buffer.alloc(8)
@@ -299,11 +318,54 @@ export class Motor extends EventEmitter   {
    * @param {number} position - Position to go in degrees
    * @param {number} [velocity] - velocity in degrees / sec
    */
-  setPosition( position, velocity ) {
-    logger(`Set Pos to ${position} velocity ${velocity}`);
+  setPosition( position, velocity, acceleration ) {
+    logger(`Set Pos to ${position} velocity ${velocity} acceleration ${acceleration}`);
     this.velocity = velocity ?? this.velocity;
+    this.acceleration = acceleration ?? this.acceleration;
+    this.currentVelocity = 0;
     this.goalPosition = position;
     this.backwards = this.goalPosition < this.currentPosition;
+
+    // Based on set acceleration there is a point where we need to start to deccel calculate that point
+    // 
+    // Below we have distances A, B, and C
+    // where A = C and are the ramp up and down times and B is the max speed time
+    //
+    // Total Distance = D
+    //
+    //  A         B         C
+    //
+    //      |          | 
+    //      ____________
+    //     /|          |\
+    // ___/ |          | \___
+    //
+    //  T1       T2        T1
+    //
+    // Our goal is to calculate A + B to determine when to start C
+
+    // First calculate the distance
+    // Example1: D = 20 - 10 = 10
+    const D = Math.abs(this.goalPosition - this.currentPosition)
+
+    // T1 is the time to get up to maxSpeed given at an acceleration.
+    // Example1: T1 = 45°s / 10°s = 4.5°s
+    const T1 = this.velocity / this.acceleration;
+
+    // Using displacement equation s=1/2 at^2 to get the distance traveled during T1
+    // Example1: A = .5 * 10°s * ( 4.5°s * 2 ) = 45
+    const A = .5 * this.acceleration * (T1 ** 2);
+
+    // B =  total distance - distance traveled to acclerate/decellerate
+    // Example1: B = 10 - ( 2 * 45 ) = -80 
+    const B = D - (2 * A);
+
+    // Now we know when to start deceleration
+    // Note if B is negative then we simply split the distance in two half for deccel and half for accel
+    this.deccelAt = B < 0 ? D / 2 : A + B;
+
+    logger(`Determined we are going to start deccel at ${this.deccelAt}`);
+
   }
 
   /** ---------------------------------
