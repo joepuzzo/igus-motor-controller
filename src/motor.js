@@ -240,13 +240,24 @@ export class Motor extends EventEmitter   {
     // Continue to accelerate if we need to
     // Only do this if we are enabled otherwise we would be updating values with no movement
     if( this.enabled ){
-      if( this.currentVelocity < this.velocity ){
+
+      // Determine if we are past the deccel point
+      const past = this.backwards ? this.currentPosition < this.deccelAt : this.currentPosition > this.deccelAt;
+
+      // Here we either accel or deccel based on where we are
+      if( this.deccelAt && past ){
+        // Decellerate
+        console.log('DECELERATING');
+        this.currentVelocity = this.currentVelocity - ( this.acceleration / 20 );
+      } else if( this.currentVelocity < this.velocity ){
+        // Accelerate
         console.log('ACCELERATING');
         // We want to accelerate and decelerate the motor over the course of its delta to goal
         // acceleration is in °/s && there are 20 cycles in 1 second
         // therefore we break acceleration down by 20, increasing by 1/20th every cycle 
         this.currentVelocity = this.currentVelocity + ( this.acceleration / 20 );
       } else { 
+        console.log('CRUSING');
         this.currentVelocity = this.velocity;
       }
     }
@@ -254,6 +265,11 @@ export class Motor extends EventEmitter   {
     // Safety check, we don't want to go over set velocity
     if( this.currentVelocity > this.velocity ){
       this.currentVelocity = this.velocity;
+    }
+
+    // Safey check we should never go negative
+    if( this.currentVelocity < 0 ){
+      this.currentVelocity = 0;
     }
 
     console.log(`VELOCITY`, this.currentVelocity);
@@ -287,6 +303,10 @@ export class Motor extends EventEmitter   {
       const neg = this.backwards;
 
       this.jointPositionSetPoint = this.currentPosition + ( neg ? -movement : movement);
+    } else {
+      logger(`Finished movement to ${this.currentPosition}`);
+      // We finished our movement so reset some things
+      this.deccelAt = null;
     }
 
     // generate the pos in encoder tics instead of degrees
