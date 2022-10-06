@@ -393,10 +393,12 @@ export class Motor extends EventEmitter   {
 
     // Now we know when to start deceleration
     // Note if B is negative then we simply split the distance in two half for deccel and half for accel
-    this.deccelAt = B < 0 ? D / 2 : A + B;
+    const deccelAt = B < 0 ? D / 2 : A + B;
+
+    // The pos is an offset from current pos
+    this.deccelAt = this.backwards ? this.currentPosition - deccelAt : this.currentPosition + deccelAt; 
 
     logger(`Determined we are going to start deccel at ${this.deccelAt}`);
-
   }
 
   /** ---------------------------------
@@ -686,6 +688,7 @@ export class Motor extends EventEmitter   {
       jointPositionSetTics: this.jointPositionSetTics,
       goalPosition: this.goalPosition,
       motorCurrent: this.motorCurrent,
+      deccelAt: this.deccelAt,
       errorCode: this.errorCode,
       errorCodeString: this.errorCodeString ?? 'n/a',
       voltage: this.voltage,
