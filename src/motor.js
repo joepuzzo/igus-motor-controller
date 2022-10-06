@@ -289,25 +289,26 @@ export class Motor extends EventEmitter   {
     // we use a tolerance because the world is not perfect
     const tolerance = 2;
 
-    const past = this.backwards ? this.currentPosition < this.goalPosition : this.currentPosition > this.goalPosition;
+    //const past = this.backwards ? this.currentPosition < this.goalPosition : this.currentPosition > this.goalPosition;
 
-    //if( this.enabled && Math.abs(this.goalPosition - this.currentPosition) > tolerance ){ 
-    if( !past ){
-      
+    const distance = Math.abs(this.goalPosition - this.currentPosition);
+
+		// If we are within two degrees just set set point to there
+		if( distance < tolerance ){
+			this.jointPositionSetPoint = this.goalPosition;
+			this.deccelAt = null;
+      //logger(`Finished movement to ${this.currentPosition}`);
+		} else if( this.enabled )  {
       // basically we are increasing the goal degs by our movement segments
       //
       // note: we may have case where we are going from 45 to 40 where the dif is 40 - 45 ===> -5
       // in this case we want to go other direction
 
-      //const neg = this.goalPosition < this.currentPosition;
-      const neg = this.backwards;
+      const neg = this.goalPosition < this.currentPosition;
+      //const neg = this.backwards;
 
       this.jointPositionSetPoint = this.currentPosition + ( neg ? -movement : movement);
-    } else {
-      logger(`Finished movement to ${this.currentPosition}`);
-      // We finished our movement so reset some things
-      this.deccelAt = null;
-    }
+    } 
 
     // generate the pos in encoder tics instead of degrees
     const pos = (this.gearZero + this.jointPositionSetPoint) * this.gearScale; 
