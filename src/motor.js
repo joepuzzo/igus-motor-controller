@@ -45,12 +45,13 @@ export class Motor extends EventEmitter   {
 
     // Define parameters
     this.id = id;
+    this.enabled = false;                     // if motor is enabled
     this.cycleTime = 50;                      // in ms
     this.gearScale = 1031.11;                 // scale for iugs Rebel joint   
     this.encoderTics = 7424;					        // tics per revolution
     this.maxVelocity = 65;                    // degree / sec
     this.velocity = this.maxVelocity;         // Initial velocity is max
-    this.currentVelocity = this.maxVelocity;  // the current velocity ( will grow and shrink based on acceleration )       
+    this.currentVelocity = 0;  // the current velocity ( will grow and shrink based on acceleration )       
     this.acceleration = 10;                   // The acceleration in degree / sec
     this.motionScale = 1;                     // Scales the motion velocity
     this.digitalOut = 0;                      // the wanted digital out channels
@@ -237,19 +238,25 @@ export class Motor extends EventEmitter   {
     // first we need to compute our position
 
     // Continue to accelerate if we need to
-    if( this.currentVelocity < this.velocity ){
-      // We want to accelerate and decelerate the motor over the course of its delta to goal
-      // acceleration is in °/s && there are 20 cycles in 1 second
-      // therefore we break acceleration down by 20, increasing by 1/20th every cycle 
-      this.currentVelocity = this.currentVelocity + ( this.acceleration / 20 );
-    } else { 
-      this.currentVelocity = this.velocity;
+    // Only do this if we are enabled otherwise we would be updating values with no movement
+    if( this.enabled ){
+      if( this.currentVelocity < this.velocity ){
+        console.log('ACCELERATING');
+        // We want to accelerate and decelerate the motor over the course of its delta to goal
+        // acceleration is in °/s && there are 20 cycles in 1 second
+        // therefore we break acceleration down by 20, increasing by 1/20th every cycle 
+        this.currentVelocity = this.currentVelocity + ( this.acceleration / 20 );
+      } else { 
+        this.currentVelocity = this.velocity;
+      }
     }
 
     // Safety check, we don't want to go over set velocity
     if( this.currentVelocity > this.velocity ){
       this.currentVelocity = this.velocity;
     }
+
+    console.log(`VELOCITY`, this.currentVelocity);
 
     // vel ist in °/s so we need to break it down into our cycle segments
     // Example: (50 / 1000 ) * 45 = 2.25 deg per cycle
@@ -266,14 +273,18 @@ export class Motor extends EventEmitter   {
     // we use a tolerance because the world is not perfect
     const tolerance = 2;
 
-    if( Math.abs(this.goalPosition - this.currentPosition) > tolerance ){ 
+    const past = this.backwards ? this.currentPosition < this.goalPosition : this.currentPosition > this.goalPosition;
+
+    //if( this.enabled && Math.abs(this.goalPosition - this.currentPosition) > tolerance ){ 
+    if( !past ){
       
       // basically we are increasing the goal degs by our movement segments
       //
       // note: we may have case where we are going from 45 to 40 where the dif is 40 - 45 ===> -5
       // in this case we want to go other direction
 
-      const neg = this.goalPosition < this.currentPosition;
+      //const neg = this.goalPosition < this.currentPosition;
+      const neg = this.backwards;
 
       this.jointPositionSetPoint = this.currentPosition + ( neg ? -movement : movement);
     }
@@ -293,7 +304,7 @@ export class Motor extends EventEmitter   {
     // Create buffer for data
     const buff = Buffer.alloc(8)
 
-    console.log('POS', pos);
+    //console.log('POS', pos);
 
     // Set data 
     buff[0] = 0x14;                                           // First byte denominates the command, here: set joint position
@@ -488,6 +499,7 @@ export class Motor extends EventEmitter   {
     
       // Wait 5 ms
       setTimeout(() => {
+        this.enabled = true;
         this.stopped = false; // Re enable sending pos updates
         this.emit('enabled');
       }, 5)
@@ -524,6 +536,7 @@ export class Motor extends EventEmitter   {
       // Send frame
       this.channel.send(out);
 
+      this.enabled = false;
       this.stopped = true;
     
       // Wait 5 ms
