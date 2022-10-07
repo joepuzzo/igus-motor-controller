@@ -60,27 +60,27 @@ export const startServer = (config) => {
 
   socket.on('motorSetPos', (id, pos) => {
     logger(`controller says setMotorPos to ${pos} for motor ${id}`);
-    robot.setMotorPosition(id, pos);
+    robot.motorSetPosition(id, pos);
   });
 
   socket.on('motorResetErrors', (id) => {
     logger(`controller says resetErrors for motor ${id}`);
-    robot.resetErrors(id);
+    robot.motorResetErrors(id);
   });
 
   socket.on('motorEnable', (id) => {
     logger(`controller says enableMotor ${id}`);
-    robot.enableMotor(id);
+    robot.motorEnable(id);
   });
 
   socket.on('motorDisable', (id) => {
     logger(`controller says disableMotor ${id}`);
-    robot.disableMotor(id);
+    robot.motorDisable(id);
   });
 
   socket.on('motorCalibrate', (id) => {
     logger(`controller says calibrateMotor ${id}`);
-    robot.calibrateMotor(id);
+    robot.motorCalibrate(id);
   });
 
   socket.on('queryMotorPosition', (id) => {
@@ -95,12 +95,32 @@ export const startServer = (config) => {
 
   socket.on('motorHome', (id) => {
     logger(`controller says motorHome ${id}`);
-    robot.homeMotor(id);
+    robot.motorHome(id);
+  });
+
+  socket.on('motorZero', (id) => {
+    logger(`controller says motorZero ${id}`);
+    robot.motorZero(id);
   });
 
   socket.on('robotHome', () => {
     logger(`controller says home robot`);
-    robot.home();
+    robot.robotHome();
+  });
+
+  socket.on('robotStop', () => {
+    logger(`controller says robotStop`);
+    robot.robotStop();
+  });
+
+  socket.on('robotEnable', () => {
+    logger(`controller says robotEnable`);
+    robot.robotEnable();
+  });
+
+  socket.on('robotCenter', () => {
+    logger(`controller says robotCenter`);
+    robot.robotCenter();
   });
 
   socket.on('disconnect', () => {

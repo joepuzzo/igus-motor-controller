@@ -45,6 +45,8 @@ export class Motor extends EventEmitter   {
 
     // Define parameters
     this.id = id;
+    this.homing = false;                      // if motor is process of homing
+    this.home = false;                        // if the motor is currently home
     this.enabled = false;                     // if motor is enabled
     this.cycleTime = 50;                      // in ms
     this.gearScale = 1031.11;                 // scale for iugs Rebel joint   
@@ -240,9 +242,7 @@ export class Motor extends EventEmitter   {
     // Example: (50 / 1000 ) * 45 = 2.25 deg per cycle
     const rate  = (this.cycleTime / 1000.0) * this.currentVelocity; 
 
-    // Determine if we are past the goal
-    const past = this.backwards ? this.currentPosition < this.goalPosition : this.currentPosition > this.goalPosition;
-
+    // How far are we from our goal
     const distance = Math.abs(this.goalPosition - this.currentPosition);
 
     // If we are within two degrees just set set point to there
@@ -263,6 +263,7 @@ export class Motor extends EventEmitter   {
     // generate the pos in encoder tics instead of degrees
     const pos = (this.gearZero + this.jointPositionSetPoint) * this.gearScale; 
     
+    // Update the set tics
     this.jointPositionSetTics = pos;
 
     // Update the timestamp keeping it between 0-255 
@@ -312,13 +313,22 @@ export class Motor extends EventEmitter   {
   }
 
   /** ---------------------------------
-   * Will home the motor by setting it to zero
+   * Will home the motor ( send it to zero )
    */
-  home() {
-    logger(`homing motor with id ${this.id}`);
+  goHome() {
+    logger(`motor ${this.id} starting to home`);
+    this.homing = true;
+    this.setPosition(0);
+  }
+
+  /** ---------------------------------
+   * Will zero the motor
+   */
+  zero() {
+    logger(`zero motor with id ${this.id}`);
 
     // We are starting to home
-    this.emit('homing');
+    this.emit('zero');
 
     // Create buffer for data
     const buff = Buffer.alloc(4)
@@ -361,7 +371,7 @@ export class Motor extends EventEmitter   {
     this.emit('calibrating');
 
     // Create buffer for data
-    const buff = Buffer.alloc(8)
+    const buff = Buffer.alloc(4)
 
     buff[0] = 0x01;
     buff[1] = 0x0C;
@@ -590,6 +600,8 @@ export class Motor extends EventEmitter   {
   get state(){
     return {
       id: this.id,
+      homing: this.homing,
+      home: this.home,
       currentPosition: this.currentPosition,
       currentTics: this.currentTics,
       encoderPulsePosition: this.encoderPulsePosition,
