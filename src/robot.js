@@ -22,7 +22,7 @@ export class Robot extends EventEmitter   {
    */
   constructor({ id }) {
 
-    logger(`creating robot with id ${id}`, motors);
+    logger(`creating robot with id ${id}`);
 
     // Becasuse we are event emitter
     super();
@@ -56,7 +56,7 @@ export class Robot extends EventEmitter   {
     this.motorMap = {};
 
     // Each motor is tracked by a name 
-    this.motorMap.j0 = new Motor({id: 'j0 ', canId: 0x01, channel: this.channel });
+    this.motorMap.j0 = new Motor({id: 'j0', canId: 0x10, channel: this.channel });
 
     // Array for iteration
     this.motors = Object.values(this.motorMap);
@@ -164,7 +164,7 @@ export class Robot extends EventEmitter   {
 
   motorZero(id){
     logger(`zero motor ${id}`);
-    this.motors[id].zero();
+    this.motorMap[id].zero();
   }
 
   motorCalibrate(id){
@@ -191,7 +191,7 @@ export class Robot extends EventEmitter   {
     this.homing = true;
 
     this.motors.forEach( motor => {
-      motor.home();
+      motor.goHome();
     });
   }
 
@@ -256,7 +256,7 @@ export class Robot extends EventEmitter   {
   get state(){
       // Build motors state object
       const motors = {};
-      Object.values(this.motors).forEach( motor => {
+      this.motors.forEach( motor => {
         motors[motor.id] = motor.state;
       });
   
@@ -273,7 +273,7 @@ export class Robot extends EventEmitter   {
   get meta(){
      // Build motors state object
      const motors = {};
-     Object.values(this.motors).forEach( motor => {
+     this.motors.forEach( motor => {
        motors[motor.id] = { id: motor.id };
      });
  
@@ -352,12 +352,12 @@ export class Robot extends EventEmitter   {
       this.config[joint][param] = value;
 
       // Update the motor
-      this.motors[joint][param] = value;
+      this.motorMap[joint][param] = value;
 
       // Special case for limitAdj
       if (param === 'limitAdj') {
         logger('Updating limitAdj so we need to also update zero step');
-        this.motors[joint].updateZeroStep();
+        this.motorMap[joint].updateZeroStep();
       }
     } else {
       this.config[key] = value;
