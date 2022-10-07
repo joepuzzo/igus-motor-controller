@@ -68,6 +68,7 @@ export class Robot extends EventEmitter   {
       motor.on('disabled', () => this.robotState() );
       motor.on('enabled', () => this.robotState() );
       motor.on('reset', () => this.robotState() );
+      motor.on('encoder', () => this.robotEncoder() );
     });
 
     // Start robot
@@ -100,6 +101,10 @@ export class Robot extends EventEmitter   {
    */
   robotState(){
     this.emit('state');
+  }
+
+  robotEncoder(){
+    this.emit('encoder');
   }
 
   /** ---------------------------------

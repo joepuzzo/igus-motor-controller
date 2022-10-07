@@ -135,6 +135,8 @@ export class Motor extends EventEmitter   {
       this.currentTics = pos;
       this.motorCurrent = buff[6];
       this.digitalIn = buff[7]; // TODO split this down into its parts like we do with error
+
+      this.emit('encoder');
     }
   }
 
