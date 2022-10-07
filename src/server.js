@@ -12,11 +12,8 @@ export const startServer = (config) => {
   const socket = io(connectionString);
   logger("created socket", connectionString);
 
-  // Define motor configs from config
-  const motors = config.ids.map( m => ({ id: m }) );
-
   // Create robot
-  const robot = new Robot({ id: config.id, motors });
+  const robot = new Robot({ id: config.id });
 
   /* ---------- Subscribe to robot events ---------- */
   robot.on('state', () => {

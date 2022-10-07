@@ -36,15 +36,16 @@ export class Motor extends EventEmitter   {
   /** -----------------------------------------------------------
    * Constructor
    */
-  constructor({ id, channel }) {
+  constructor({ id, canId, channel }) {
 
-    logger(`creating motor with id ${id}`);
+    logger(`creating motor ${id} with canId ${canId}`);
 
     // Becasuse we are event emitter
     super();
 
     // Define parameters
-    this.id = id;
+    this.id = id;                             // motor id
+    this.canId = canId;                       // motor canId
     this.homing = false;                      // if motor is process of homing
     this.home = false;                        // if the motor is currently home
     this.enabled = false;                     // if motor is enabled
@@ -88,13 +89,13 @@ export class Motor extends EventEmitter   {
     // Add subscription but only for our messages
     this.channel.addListener("onMessage", (msg) => {
 
-      if(msg.id === this.id + 1) {
+      if(msg.id === this.canId + 1) {
         this.handleMotionMessage(msg) 
       }
-      if(msg.id === this.id + 2) {
+      if(msg.id === this.canId + 2) {
         this.handleProcessMessage(msg) 
       }
-      if(msg.id === this.id + 3) {
+      if(msg.id === this.canId + 3) {
         this.handleEnvironmentalMessage(msg) 
       }
     });
@@ -287,7 +288,7 @@ export class Motor extends EventEmitter   {
   
     // Create our output frame
     const out = {
-      id: this.id,
+      id: this.canId,
       data: buff
     };
   
@@ -343,7 +344,7 @@ export class Motor extends EventEmitter   {
     
     // Create our output frame
     const out = {
-      id: this.id,
+      id: this.canId,
       data: buff
     };
 
@@ -383,7 +384,7 @@ export class Motor extends EventEmitter   {
     
     // Create our output frame
     const out = {
-      id: this.id,
+      id: this.canId,
       data: buff
     };
 
@@ -432,7 +433,7 @@ export class Motor extends EventEmitter   {
 
       // Create our output frame
       const out = {
-        id: this.id,
+        id: this.canId,
         data: buff
       };
 
@@ -471,7 +472,7 @@ export class Motor extends EventEmitter   {
 
       // Create our output frame
       const out = {
-        id: this.id,
+        id: this.canId,
         data: buff
       };
 
@@ -516,7 +517,7 @@ export class Motor extends EventEmitter   {
 
     // Create our output frame
     const out = {
-      id: this.id,
+      id: this.canId,
       data: buff
     };
 
@@ -559,7 +560,7 @@ export class Motor extends EventEmitter   {
     
       // Create our output frame
       const out = {
-        id: this.id,
+        id: this.canId,
         data: buff
       };
 
@@ -584,7 +585,7 @@ export class Motor extends EventEmitter   {
     
       // Create our output frame
       const out = {
-        id: this.id,
+        id: this.canId,
         data: buff
       };
 
@@ -600,6 +601,7 @@ export class Motor extends EventEmitter   {
   get state(){
     return {
       id: this.id,
+      canId: this.canId,
       homing: this.homing,
       home: this.home,
       currentPosition: this.currentPosition,

@@ -3,6 +3,10 @@ import can from "socketcan";
 import {EventEmitter} from 'events';
 import { Motor } from './motor.js';
 
+// For reading and writing to config
+import path from 'path';
+import fs from 'fs';
+
 // For debugging
 import { Debug } from './debug.js';
 const logger = Debug('igus:robot' + '\t');
@@ -16,7 +20,7 @@ export class Robot extends EventEmitter   {
   /** -----------------------------------------------------------
    * Constructor
    */
-  constructor({ id, motors }) {
+  constructor({ id }) {
 
     logger(`creating robot with id ${id}`, motors);
 
@@ -25,15 +29,6 @@ export class Robot extends EventEmitter   {
 
     // Create channel
     this.channel = can.createRawChannel('can1', true);
-
-    // Create motors
-    this.motorMap = {};
-    this.motors = motors.map( (config, i) => {
-      const motor = new Motor({ ...config, channel: this.channel })
-      // Track by id
-      this.motorMap[config.id] = motor;
-      return motor;
-    });
 
     // Define parameters
     this.id = id;
@@ -45,6 +40,27 @@ export class Robot extends EventEmitter   {
     this.homing = false;              // if the robot is currently homing
     this.moving = false;              // if the robot is moving to a given position ( set angles was called )
 
+    // Setup robot
+    this.setup();
+  }
+
+  /** ------------------------------
+   * setup
+   */
+  setup() {
+
+    // First read in the config 
+    this.readConfig();
+    
+    // Create motors
+    this.motorMap = {};
+
+    // Each motor is tracked by a name 
+    this.motorMap.j0 = new Motor({id: 'j0 ', canId: 0x01, channel: this.channel });
+
+    // Array for iteration
+    this.motors = Object.values(this.motorMap);
+
     // Subscribe to events for all motors
     this.motors.forEach(motor => {
       motor.on('homing', () => this.robotState() );
@@ -54,9 +70,9 @@ export class Robot extends EventEmitter   {
       motor.on('reset', () => this.robotState() );
     });
 
-    // Start up
+    // Start robot
     this.start();
-  }
+   }
 
   /** ---------------------------------
    * Starts up the robot
@@ -270,6 +286,89 @@ export class Robot extends EventEmitter   {
        moving: this.moving,
        motors
      }
+  }
+
+  /** ------------------------------
+   * readConfig
+   */
+  readConfig() {
+    // Read in config file ( create if it does not exist yet )
+    try {
+      // Get filename
+      const filename = path.resolve('config.json');
+
+      // Check if it exists and create if it does not
+      if (!fs.existsSync(filename)) {
+        console.log('Config file does not exist creating');
+        fs.writeFileSync(filename, JSON.stringify({}));
+      }
+
+      // Read in config file
+      const config = JSON.parse(fs.readFileSync(filename, 'utf8'));
+
+      logger('Successfully read in config', config);
+
+      this.config = config;
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  
+  /** ------------------------------
+   * writeConfig
+   */
+  writeConfig() {
+    logger('Writing config to file', this.config);
+    try {
+      // Get filename
+      const filename = path.resolve('config.json');
+      // Write config
+      fs.writeFileSync(filename, JSON.stringify(this.config));
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  /** ------------------------------
+   * updateConfig
+   *
+   * By default this will NOT save to the file it will only update in memory
+   * Note: a call to writeConfig() at any time will save everything that has been updated to the file
+   */
+  updateConfig(key, value, save = false) {
+    logger(`updating config ${key} to ${value}`);
+
+    // Special check ( dont let user set a config param to null !! )
+    if (value == null) {
+      logger(`Unable to set ${key} to ${value} as its null`);
+      return;
+    }
+
+    // Example key = "j0.limitAdj"
+    if (key.includes('.')) {
+      const [joint, param] = key.split('.');
+
+      // Update the config
+      this.config[joint][param] = value;
+
+      // Update the motor
+      this.motors[joint][param] = value;
+
+      // Special case for limitAdj
+      if (param === 'limitAdj') {
+        logger('Updating limitAdj so we need to also update zero step');
+        this.motors[joint].updateZeroStep();
+      }
+    } else {
+      this.config[key] = value;
+    }
+
+    // Now write the config out
+    if (save) this.writeConfig();
+
+    logger(`updated config`, this.config);
+
+    this.emit('meta');
   }
 
 }
