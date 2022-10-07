@@ -136,7 +136,8 @@ export class Motor extends EventEmitter   {
       this.motorCurrent = buff[6];
       this.digitalIn = buff[7]; // TODO split this down into its parts like we do with error
 
-      this.emit('encoder');
+      // This is to fast so we just have interval in the robot
+      //this.emit('encoder');
     }
   }
 

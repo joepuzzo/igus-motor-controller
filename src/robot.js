@@ -68,7 +68,6 @@ export class Robot extends EventEmitter   {
       motor.on('disabled', () => this.robotState() );
       motor.on('enabled', () => this.robotState() );
       motor.on('reset', () => this.robotState() );
-      motor.on('encoder', () => this.robotEncoder() );
     });
 
     // Start robot
@@ -90,6 +89,11 @@ export class Robot extends EventEmitter   {
       this.emit('state', this.state);
     }, this.uiFrequency);
 
+    // Report all encoder updates at 100ms interval
+    setInterval(()=>{
+    	this.emit('encoder');
+    }, 100);
+
     logger(`robot with id ${this.id} is ready`);
     this.ready = true;
     this.emit('ready');
@@ -101,10 +105,6 @@ export class Robot extends EventEmitter   {
    */
   robotState(){
     this.emit('state');
-  }
-
-  robotEncoder(){
-    this.emit('encoder');
   }
 
   /** ---------------------------------
