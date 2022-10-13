@@ -5,7 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "DEBUG='igus:.*' node index.js -p 3000 --host 192.168.0.107",
+    "start-grafana": "docker run -d --name=grafana -p 3001:3000 -e GF_INSTALL_PLUGINS=golioth-websocket-datasource grafana/grafana"
   },
   "keywords": [],
   "author": "",
