@@ -55,7 +55,7 @@ export class Motor extends EventEmitter   {
     this.maxVelocity = 65;                    // degree / sec
     this.velocity = this.maxVelocity;         // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
-    this.acceleration = 10;                   // The acceleration in degree / sec
+    this.acceleration = 40;                   // The acceleration in degree / sec
     this.motionScale = 1;                     // Scales the motion velocity
     this.digitalOut = 0;                      // the wanted digital out channels
     this.digitalIn = 0;                       // the current digital int channels
