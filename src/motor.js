@@ -36,35 +36,41 @@ export class Motor extends EventEmitter   {
   /** -----------------------------------------------------------
    * Constructor
    */
-  constructor({ id, channel }) {
+  constructor({ id, canId, channel }) {
 
-    logger(`creating motor with id ${id}`);
+    logger(`creating motor ${id} with canId ${canId}`);
 
     // Becasuse we are event emitter
     super();
 
     // Define parameters
-    this.id = id;
-    this.cycleTime = 50;              // in ms
-    this.gearScale = 1031.11;         // scale for iugs Rebel joint   
-    this.encoderTics = 7424;					// tics per revolution
-    this.maxVelocity = 65;            // degree / sec
-    this.velocity = this.maxVelocity; // Initial velocity is max
-    this.motionScale = 1;             // Scales the motion velocity
-    this.digitalOut = 0;              // the wanted digital out channels
-    this.digitalIn = 0;               // the current digital int channels
-    this.goalPosition = 0;            // The joint goal position in degrees
-    this.currentPosition  = 0;        // the current joint positions in degree, loaded from the robot arm
-    this.currentTics = 0;             // the current position in tics loaded from motor 
-    this.jointPositionSetPoint = 0;   // The set point is a periodicly updated goal point 
-    this.timeStamp = 0;               // For message ordering 
-    this.motorCurrent = 0;            // Motor current in mA
-    this.errorCode = 0;               // the error state of the joint module
-    this.errorCodeString;             // human readable error code for the joint module
-    this.stopped = true;              // will disable position sends
-    this.robotStopped = false;        // the motor might stop things but the robot might also have stop set
-    this.gearZero = 0;                // zero pos for gear
-    this.encoderPulsePosition = null; // the current joint position in degrees sent by the heartbeat from motor 
+    this.id = id;                             // motor id
+    this.canId = canId;                       // motor canId
+    this.homing = false;                      // if motor is process of homing
+    this.home = false;                        // if the motor is currently home
+    this.enabled = false;                     // if motor is enabled
+    this.cycleTime = 50;                      // in ms
+    this.gearScale = 1031.11;                 // scale for iugs Rebel joint   
+    this.encoderTics = 7424;					        // tics per revolution
+    this.maxVelocity = 65;                    // degree / sec
+    this.velocity = this.maxVelocity;         // Initial velocity is max
+    this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
+    this.acceleration = 10;                   // The acceleration in degree / sec
+    this.motionScale = 1;                     // Scales the motion velocity
+    this.digitalOut = 0;                      // the wanted digital out channels
+    this.digitalIn = 0;                       // the current digital int channels
+    this.goalPosition = 0;                    // The joint goal position in degrees
+    this.currentPosition  = 0;                // the current joint positions in degree, loaded from the robot arm
+    this.currentTics = 0;                     // the current position in tics loaded from motor 
+    this.jointPositionSetPoint = 0;           // The set point is a periodicly updated goal point 
+    this.timeStamp = 0;                       // For message ordering 
+    this.motorCurrent = 0;                    // Motor current in mA
+    this.errorCode = 0;                       // the error state of the joint module
+    this.errorCodeString;                     // human readable error code for the joint module
+    this.stopped = true;                      // will disable position sends
+    this.robotStopped = false;                // the motor might stop things but the robot might also have stop set
+    this.gearZero = 0;                        // zero pos for gear
+    this.encoderPulsePosition = null;         // the current joint position in degrees sent by the heartbeat from motor 
     this.encoderPulseTics = null;
     this.parameters = { board: {}, motor: {}, axis: {}, control: {} };             // A place to store any read parameters 
 
@@ -83,13 +89,13 @@ export class Motor extends EventEmitter   {
     // Add subscription but only for our messages
     this.channel.addListener("onMessage", (msg) => {
 
-      if(msg.id === this.id + 1) {
+      if(msg.id === this.canId + 1) {
         this.handleMotionMessage(msg) 
       }
-      if(msg.id === this.id + 2) {
+      if(msg.id === this.canId + 2) {
         this.handleProcessMessage(msg) 
       }
-      if(msg.id === this.id + 3) {
+      if(msg.id === this.canId + 3) {
         this.handleEnvironmentalMessage(msg) 
       }
     });
@@ -129,6 +135,9 @@ export class Motor extends EventEmitter   {
       this.currentTics = pos;
       this.motorCurrent = buff[6];
       this.digitalIn = buff[7]; // TODO split this down into its parts like we do with error
+
+      // This is to fast so we just have interval in the robot
+      //this.emit('encoder');
     }
   }
 
@@ -165,6 +174,8 @@ export class Motor extends EventEmitter   {
         // First time so initialize the current pos to this
         this.currentPosition = inDegrees;
 				this.currentTics = pos;
+        // Need to initialize the direction we will move to get to start goal ( 0 )
+        this.backwards = this.goalPosition < this.currentPosition;
         //this.stopped = false;
       }
       
@@ -229,52 +240,47 @@ export class Motor extends EventEmitter   {
       return;
     }
 
-    // write the setPoint command to the CAN bus
-    // CPRCANV2 protocol:
-    // 0x14 vel pos0 pos1 pos2 pos3 timer dout
-
-    // first we need to compute our position
+    // first we need to compute our position 
 
     // vel ist in °/s so we need to break it down into our cycle segments
-    // Example: (50 / 1000 ) * 45 = 2.25 deg per tic
-    const rate  = (this.cycleTime / 1000.0) * this.velocity; 
+    // Example: (50 / 1000 ) * 45 = 2.25 deg per cycle
+    const rate  = (this.cycleTime / 1000.0) * this.currentVelocity; 
 
-    // Our motor cant nessisarily move 2.25 deg per 50 ms so we need to scale it down
-    // Example: 2.25 °/tic * 0.3 = 0.675 °/tic
-    const movement = rate * this.motionScale; 
+    // How far are we from our goal
+    const distance = Math.abs(this.goalPosition - this.currentPosition);
 
-    //console.log('Movement', movement);
-
-    // If we are not at our goal pos keep moving forward by the movement
-    //
-    // Example: goalPosition = 45  currentPosition = -45 
-    // goalPosition - currentPosition = 45 - ( -45 ) = 90 ... i.e we still have 90 deg to move!
-    // we use a tolerance because the world is not perfect
-    const tolerance = 2;
-
-    if( Math.abs(this.goalPosition - this.currentPosition) > tolerance ){ 
-      // basically we are increasing the goal degs by our movement segments
+    // If we are within two degrees just set set point to there
+		if( distance < 2 ){
+			this.jointPositionSetPoint = this.goalPosition;
+      //logger(`Finished movement to ${this.currentPosition}`);
+		} else if( this.enabled )  {
+      
+      // Basically we are increasing the goal degs by our movement segments
       //
       // note: we may have case where we are going from 45 to 40 where the dif is 40 - 45 ===> -5
       // in this case we want to go other direction
-
       const neg = this.goalPosition < this.currentPosition;
 
-      this.jointPositionSetPoint = this.currentPosition + ( neg ? -movement : movement);
-    }
+      this.jointPositionSetPoint = this.currentPosition + ( neg ? -rate : rate);
+    } 
 
     // generate the pos in encoder tics instead of degrees
     const pos = (this.gearZero + this.jointPositionSetPoint) * this.gearScale; 
     
+    // Update the set tics
     this.jointPositionSetTics = pos;
 
     // Update the timestamp keeping it between 0-255 
     this.timeStamp = this.timeStamp === 255 ? 0 : this.timeStamp + 1;
+
+    // write the setPoint command to the CAN bus
+    //
+    // 0x14 vel pos0 pos1 pos2 pos3 timer digital_out
     
     // Create buffer for data
     const buff = Buffer.alloc(8)
 
-    console.log('POS', pos);
+    //console.log('POS', pos);
 
     // Set data 
     buff[0] = 0x14;                                           // First byte denominates the command, here: set joint position
@@ -285,7 +291,7 @@ export class Motor extends EventEmitter   {
   
     // Create our output frame
     const out = {
-      id: this.id,
+      id: this.canId,
       data: buff
     };
   
@@ -299,21 +305,34 @@ export class Motor extends EventEmitter   {
    * @param {number} position - Position to go in degrees
    * @param {number} [velocity] - velocity in degrees / sec
    */
-  setPosition( position, velocity ) {
-    logger(`Set Pos to ${position} velocity ${velocity}`);
+  setPosition( position, velocity, acceleration ) {
+    logger(`Set Pos to ${position} velocity ${velocity} acceleration ${acceleration}`);
     this.velocity = velocity ?? this.velocity;
+    this.acceleration = acceleration ?? this.acceleration;
+    this.currentVelocity = this.velocity;
     this.goalPosition = position;
     this.backwards = this.goalPosition < this.currentPosition;
+
+    logger(`Goal: ${this.goalPosition}, Current ${this.currentPosition}, Backwards: ${this.backwards}`);
   }
 
   /** ---------------------------------
-   * Will home the motor by setting it to zero
+   * Will home the motor ( send it to zero )
    */
-  home() {
-    logger(`homing motor with id ${this.id}`);
+  goHome() {
+    logger(`motor ${this.id} starting to home`);
+    this.homing = true;
+    this.setPosition(0);
+  }
+
+  /** ---------------------------------
+   * Will zero the motor
+   */
+  zero() {
+    logger(`zero motor with id ${this.id}`);
 
     // We are starting to home
-    this.emit('homing');
+    this.emit('zero');
 
     // Create buffer for data
     const buff = Buffer.alloc(4)
@@ -328,7 +347,7 @@ export class Motor extends EventEmitter   {
     
     // Create our output frame
     const out = {
-      id: this.id,
+      id: this.canId,
       data: buff
     };
 
@@ -356,7 +375,7 @@ export class Motor extends EventEmitter   {
     this.emit('calibrating');
 
     // Create buffer for data
-    const buff = Buffer.alloc(8)
+    const buff = Buffer.alloc(4)
 
     buff[0] = 0x01;
     buff[1] = 0x0C;
@@ -368,7 +387,7 @@ export class Motor extends EventEmitter   {
     
     // Create our output frame
     const out = {
-      id: this.id,
+      id: this.canId,
       data: buff
     };
 
@@ -417,7 +436,7 @@ export class Motor extends EventEmitter   {
 
       // Create our output frame
       const out = {
-        id: this.id,
+        id: this.canId,
         data: buff
       };
 
@@ -426,6 +445,7 @@ export class Motor extends EventEmitter   {
     
       // Wait 5 ms
       setTimeout(() => {
+        this.enabled = true;
         this.stopped = false; // Re enable sending pos updates
         this.emit('enabled');
       }, 5)
@@ -455,13 +475,14 @@ export class Motor extends EventEmitter   {
 
       // Create our output frame
       const out = {
-        id: this.id,
+        id: this.canId,
         data: buff
       };
 
       // Send frame
       this.channel.send(out);
 
+      this.enabled = false;
       this.stopped = true;
     
       // Wait 5 ms
@@ -499,7 +520,7 @@ export class Motor extends EventEmitter   {
 
     // Create our output frame
     const out = {
-      id: this.id,
+      id: this.canId,
       data: buff
     };
 
@@ -542,7 +563,7 @@ export class Motor extends EventEmitter   {
     
       // Create our output frame
       const out = {
-        id: this.id,
+        id: this.canId,
         data: buff
       };
 
@@ -567,7 +588,7 @@ export class Motor extends EventEmitter   {
     
       // Create our output frame
       const out = {
-        id: this.id,
+        id: this.canId,
         data: buff
       };
 
@@ -583,6 +604,9 @@ export class Motor extends EventEmitter   {
   get state(){
     return {
       id: this.id,
+      canId: this.canId,
+      homing: this.homing,
+      home: this.home,
       currentPosition: this.currentPosition,
       currentTics: this.currentTics,
       encoderPulsePosition: this.encoderPulsePosition,
