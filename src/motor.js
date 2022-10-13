@@ -585,7 +585,7 @@ export class Motor extends EventEmitter   {
       buff[0] = 0x96;                                           // First byte denominates the command, here: Read parameters 0x96
       buff[1] = index;                                          // Index
       buff[2] = subindex;                                       // SubIndex
-    
+
       // Create our output frame
       const out = {
         id: this.canId,
@@ -596,6 +596,59 @@ export class Motor extends EventEmitter   {
       this.channel.send(out);
   }
 
+  /** ---------------------------------
+   * saveParameter of the Motor
+   *
+   */
+   saveParameter(index, subindex, value) {
+    logger(`save parameter ${this.id} index ${index} subindex ${subindex} value ${value}`);
+
+    // Create buffer for data
+    const buff = Buffer.alloc(7)
+
+    // Set data
+    buff[0] = 0x94;                                           // First byte denominates the command, here: Read parameters 0x96
+    buff[1] = index;                                          // Index
+    buff[2] = subindex;                                       // SubIndex
+    buff.write(value, 3);
+  
+    // Create our output frame
+    const out = {
+      id: this.id,
+      data: buff
+    };
+
+    // Send frame
+    this.channel.send(out);
+}
+/** ---------------------------------
+ * save Position Proportional constant of the Motor Position PID
+ *
+ */
+savePositionPParameter(kP) {
+  this.saveParameter(3,0,kP);
+}
+/** ---------------------------------
+ * save Position Integral constant of the Motor Position PID
+ *
+ */
+savePositionIParameter(kI) {
+  this.saveParameter(3,1,kI);
+}
+/** ---------------------------------
+ * save Position Derivative constant of the Motor Position PID
+ *
+ */
+savePositionDParameter(kD) {
+  this.saveParameter(3,2,kD);
+}
+/** ---------------------------------
+ * save Position AntiWindup constant of the Motor Position PID
+ *
+ */
+savePositionAntiWindupParameter(kAW) {
+  this.saveParameter(3,3,kAW);
+}
   /** ---------------------------------
    * Will get the current joint state 
    * 
