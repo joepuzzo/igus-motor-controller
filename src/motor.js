@@ -286,11 +286,6 @@ export class Motor extends EventEmitter   {
       	this.currentVelocity = this.velocity;
     	}
 
-    	// Safey check we should never go below limit
-    	if( this.currentVelocity < 10 ){
-      	this.currentVelocity = 10;
-    	}
-
     	//console.log(`VELOCITY`, this.currentVelocity);
 
       // vel ist in °/s so we need to break it down into our cycle segments
