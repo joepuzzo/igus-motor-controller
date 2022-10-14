@@ -56,7 +56,7 @@ export class Motor extends EventEmitter   {
     this.velocity = this.maxVelocity;         // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
     this.acceleration = 40;                   // The acceleration in degree / sec
-    this.motionScale = 1;                     // Scales the motion velocity
+    this.motionScale = 0.3;                   // Scales the motion velocity
     this.digitalOut = 0;                      // the wanted digital out channels
     this.digitalIn = 0;                       // the current digital int channels
     this.goalPosition = 0;                    // The joint goal position in degrees
@@ -297,6 +297,10 @@ export class Motor extends EventEmitter   {
       // Example: (50 / 1000 ) * 45 = 2.25 deg per cycle
       const rate  = (this.cycleTime / 1000.0) * this.currentVelocity; 
 
+      // Our motor cant nessisarily move 2.25 deg per 50 ms so we need to scale it down
+      // Example: 2.25 °/tic * 0.3 = 0.675 °/tic
+      // const movement = rate * this.motionScale; 
+
       this.jointPositionSetPoint = this.currentPosition + ( neg ? -rate : rate);
     } 
 
@@ -379,7 +383,7 @@ export class Motor extends EventEmitter   {
 
     // Using displacement equation s=1/2 at^2 to get the distance traveled during T1
     // Example: A = .5 * 40°s * ( 1.625°s ** 2 ) = 52.8125
-    const A = .5 * this.acceleration * (T1 ** 2);
+    const A = .5 * this.acceleration * (T1 ** 2) * this.motionScale;
 
     // B =  total distance - distance traveled to acclerate/decellerate
     // Example1: B = 90 - ( 2 * 52.8125 ) = -15.625 
