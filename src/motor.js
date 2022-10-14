@@ -245,8 +245,10 @@ export class Motor extends EventEmitter   {
     // How far are we from our goal
     const distance = Math.abs(this.goalPosition - this.currentPosition);
 
+    //console.log(`DISTANCE ${distance}`);
+
     // If we are within two degrees just set set point to there
-		if( distance < 2 ){
+		if( distance < 1 ){
 			this.jointPositionSetPoint = this.goalPosition;
       //logger(`Finished movement to ${this.currentPosition}`);
 		} else if( this.enabled )  {
@@ -260,22 +262,36 @@ export class Motor extends EventEmitter   {
       // Determine if we are past the deccel point
       const past = neg ? this.currentPosition < this.deccelAt : this.currentPosition > this.deccelAt;
 
+      //console.log('PAST', past);
+
       // Here we either accel or deccel based on where we are
       if( this.deccelAt && past ){
         // Decellerate
-        console.log('DECELERATING');
+        console.log('DECELERATING', this.currentPosition);
         this.currentVelocity = this.currentVelocity - ( this.acceleration / 20 );
-      } else if( this.currentVelocity < this.velocity ){
+      } else if( this.currentVelocity < this.velocity && !past ){
         // Accelerate
-        console.log('ACCELERATING');
+        console.log('ACCELERATING', this.currentPosition);
         // We want to accelerate and decelerate the motor over the course of its delta to goal
         // acceleration is in °/s && there are 20 cycles in 1 second
         // therefore we break acceleration down by 20, increasing by 1/20th every cycle 
         this.currentVelocity = this.currentVelocity + ( this.acceleration / 20 );
       } else { 
-        console.log('CRUSING');
+        console.log('CRUSING', this.currentPosition);
         this.currentVelocity = this.velocity;
       }
+
+  		// Safety check, we don't want to go over set velocity
+    	if( this.currentVelocity > this.velocity ){
+      	this.currentVelocity = this.velocity;
+    	}
+
+    	// Safey check we should never go below limit
+    	if( this.currentVelocity < 10 ){
+      	this.currentVelocity = 10;
+    	}
+
+    	//console.log(`VELOCITY`, this.currentVelocity);
 
       // vel ist in °/s so we need to break it down into our cycle segments
       // Example: (50 / 1000 ) * 45 = 2.25 deg per cycle
@@ -329,7 +345,8 @@ export class Motor extends EventEmitter   {
     logger(`Set Pos to ${position} velocity ${velocity} acceleration ${acceleration}`);
     this.velocity = velocity ?? this.velocity;
     this.acceleration = acceleration ?? this.acceleration;
-    this.currentVelocity = this.velocity;
+    //this.currentVelocity = this.velocity;
+    this.currentVelocity = 0;
     this.goalPosition = position;
     this.backwards = this.goalPosition < this.currentPosition;
 
@@ -352,7 +369,7 @@ export class Motor extends EventEmitter   {
     // Our goal is to calculate A + B to determine when to start C
 
     // First calculate the distance
-    // Example1: D = 180 - 10 = 170
+    // Example1: D = 90 - 0 = 90
     // Example2: D = 20 - 10 = 10
     const D = Math.abs(this.goalPosition - this.currentPosition)
 
@@ -361,11 +378,11 @@ export class Motor extends EventEmitter   {
     const T1 = this.velocity / this.acceleration;
 
     // Using displacement equation s=1/2 at^2 to get the distance traveled during T1
-    // Example: A = .5 * 5°s * ( 13°s ** 2 ) = 52.8125
+    // Example: A = .5 * 40°s * ( 1.625°s ** 2 ) = 52.8125
     const A = .5 * this.acceleration * (T1 ** 2);
 
     // B =  total distance - distance traveled to acclerate/decellerate
-    // Example1: B = 170 - ( 2 * 52.8125 ) = 64.375 
+    // Example1: B = 90 - ( 2 * 52.8125 ) = -15.625 
     // Example2: B = 10 - ( 2 * 52.8125 ) = -95.625
     const B = D - (2 * A);
 
@@ -376,7 +393,7 @@ export class Motor extends EventEmitter   {
     // The deccelAt position is an offset from current pos
     this.deccelAt = this.backwards ? this.currentPosition - deccelAt : this.currentPosition + deccelAt; 
 
-    logger(`Determined we are going to start deccel at ${this.deccelAt}`);
+    logger(`Determined we are going to start deccel at ${this.deccelAt}, A: ${A}, B: ${B}, D: ${D}, T1: ${T1}`);
 
     logger(`Goal: ${this.goalPosition}, Current ${this.currentPosition}, Backwards: ${this.backwards}`);
   }
