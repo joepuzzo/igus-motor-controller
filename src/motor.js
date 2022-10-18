@@ -251,7 +251,7 @@ export class Motor extends EventEmitter   {
     //console.log(`DISTANCE ${distance}`);
 
     // If we are within two degrees just set set point to there
-		if( distance < 1 ){
+		if( distance < 2 ){
 			this.jointPositionSetPoint = this.goalPosition;
       //logger(`Finished movement to ${this.currentPosition}`);
 		} else if( this.enabled )  {

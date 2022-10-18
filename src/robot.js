@@ -353,17 +353,13 @@ export class Robot extends EventEmitter   {
     if (key.includes('.')) {
       const [joint, param] = key.split('.');
 
+      logger(`updating ${joint}'s ${param} to ${value}`, this.config[joint])
+
       // Update the config
       this.config[joint][param] = value;
 
       // Update the motor
       this.motorMap[joint][param] = value;
-
-      // Special case for limitAdj
-      if (param === 'limitAdj') {
-        logger('Updating limitAdj so we need to also update zero step');
-        this.motorMap[joint].updateZeroStep();
-      }
     } else {
       this.config[key] = value;
     }
