@@ -36,7 +36,7 @@ export class Motor extends EventEmitter   {
   /** -----------------------------------------------------------
    * Constructor
    */
-  constructor({ id, canId, channel }) {
+  constructor({ id, canId, channel, limNeg = -180, limPos = 180, accelEnabled = true }) {
 
     logger(`creating motor ${id} with canId ${canId}`);
 
@@ -52,11 +52,14 @@ export class Motor extends EventEmitter   {
     this.cycleTime = 50;                      // in ms
     this.gearScale = 1031.11;                 // scale for iugs Rebel joint   
     this.encoderTics = 7424;					        // tics per revolution
-    this.maxVelocity = 65;                    // degree / sec
+    this.maxVelocity = 105;                   // degree / sec
     this.velocity = this.maxVelocity;         // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
-    this.acceleration = 10;                   // The acceleration in degree / sec
-    this.motionScale = 1;                     // Scales the motion velocity
+    this.acceleration = 40;                   // The acceleration in degree / sec
+    this.accelEnabled = accelEnabled;         // If acceleration/deceleration is enabled
+    this.motionScale = 0.3;                   // Scales the motion velocity
+    this.limPos = limPos;                     // the limit in posative direction in degrees
+    this.limNeg = limNeg;                     // the limit in negative direction in degrees
     this.digitalOut = 0;                      // the wanted digital out channels
     this.digitalIn = 0;                       // the current digital int channels
     this.goalPosition = 0;                    // The joint goal position in degrees
@@ -242,24 +245,59 @@ export class Motor extends EventEmitter   {
 
     // first we need to compute our position 
 
-    // vel ist in °/s so we need to break it down into our cycle segments
-    // Example: (50 / 1000 ) * 45 = 2.25 deg per cycle
-    const rate  = (this.cycleTime / 1000.0) * this.currentVelocity; 
-
     // How far are we from our goal
     const distance = Math.abs(this.goalPosition - this.currentPosition);
+
+    //console.log(`DISTANCE ${distance}`);
 
     // If we are within two degrees just set set point to there
 		if( distance < 2 ){
 			this.jointPositionSetPoint = this.goalPosition;
       //logger(`Finished movement to ${this.currentPosition}`);
 		} else if( this.enabled )  {
-      
+
       // Basically we are increasing the goal degs by our movement segments
       //
       // note: we may have case where we are going from 45 to 40 where the dif is 40 - 45 ===> -5
       // in this case we want to go other direction
       const neg = this.goalPosition < this.currentPosition;
+
+      // Determine if we are past the deccel point
+      const past = neg ? this.currentPosition < this.deccelAt : this.currentPosition > this.deccelAt;
+
+      //console.log('PAST', past);
+
+      // Here we either accel or deccel based on where we are
+      if( this.accelEnabled && this.deccelAt && past ){
+        // Decellerate
+        console.log('DECELERATING', this.currentPosition);
+        this.currentVelocity = this.currentVelocity - ( this.acceleration / 20 );
+      } else if(  this.accelEnabled && this.currentVelocity < this.velocity && !past ){
+        // Accelerate
+        console.log('ACCELERATING', this.currentPosition);
+        // We want to accelerate and decelerate the motor over the course of its delta to goal
+        // acceleration is in °/s && there are 20 cycles in 1 second
+        // therefore we break acceleration down by 20, increasing by 1/20th every cycle 
+        this.currentVelocity = this.currentVelocity + ( this.acceleration / 20 );
+      } else { 
+        console.log('CRUSING', this.currentPosition);
+        this.currentVelocity = this.velocity;
+      }
+
+  		// Safety check, we don't want to go over set velocity
+    	if( this.currentVelocity > this.velocity ){
+      	this.currentVelocity = this.velocity;
+    	}
+
+    	//console.log(`VELOCITY`, this.currentVelocity);
+
+      // vel ist in °/s so we need to break it down into our cycle segments
+      // Example: (50 / 1000 ) * 45 = 2.25 deg per cycle
+      const rate  = (this.cycleTime / 1000.0) * this.currentVelocity; 
+
+      // Our motor cant nessisarily move 2.25 deg per 50 ms so we need to scale it down
+      // Example: 2.25 °/tic * 0.3 = 0.675 °/tic
+      // const movement = rate * this.motionScale; 
 
       this.jointPositionSetPoint = this.currentPosition + ( neg ? -rate : rate);
     } 
@@ -306,12 +344,68 @@ export class Motor extends EventEmitter   {
    * @param {number} [velocity] - velocity in degrees / sec
    */
   setPosition( position, velocity, acceleration ) {
-    logger(`Set Pos to ${position} velocity ${velocity} acceleration ${acceleration}`);
+
+		// Safety check ( don't allow set pos to an angle outside the limits )
+    if( position > this.limPos || position < this.limNeg ){
+      logger(`ERROR: motor ${this.id} set position to ${position}º is outside the bounds of this motor!!!`);
+      this.error = 'OUT_OF_BOUNDS';
+      this.emit('motorError');
+      return;
+    }
+
+    logger(`Motor ${this.id} Set Pos to ${position} velocity ${velocity} acceleration ${acceleration}`);
     this.velocity = velocity ?? this.velocity;
     this.acceleration = acceleration ?? this.acceleration;
-    this.currentVelocity = this.velocity;
+    //this.currentVelocity = this.velocity;
+    this.currentVelocity = 0;
     this.goalPosition = position;
     this.backwards = this.goalPosition < this.currentPosition;
+    this.deccelAt = null;
+
+    // Based on set acceleration there is a point where we need to start to deccel calculate that point
+    // 
+    // Below we have distances A, B, and C
+    // where A = C and are the ramp up and down times and B is the max speed time
+    //
+    // Total Distance = D
+    //
+    //  A         B         C
+    //
+    //      |          | 
+    //      ____________
+    //     /|          |\
+    // ___/ |          | \___
+    //
+    //  T1       T2        T1
+    //
+    // Our goal is to calculate A + B to determine when to start C
+
+    // First calculate the distance
+    // Example1: D = 90 - 0 = 90
+    // Example2: D = 20 - 10 = 10
+    const D = Math.abs(this.goalPosition - this.currentPosition)
+
+    // T1 is the time to get up to maxSpeed given at an acceleration.
+    // Example: T1 = 65°s / 40°s = 1.625°s
+    const T1 = this.velocity / this.acceleration;
+
+    // Using displacement equation s=1/2 at^2 to get the distance traveled during T1
+    // Example: A = .5 * 40°s * ( 1.625°s ** 2 ) = 52.8125
+    const A = .5 * this.acceleration * (T1 ** 2) * this.motionScale;
+
+    // B =  total distance - distance traveled to acclerate/decellerate
+    // Example1: B = 90 - ( 2 * 52.8125 ) = -15.625 
+    // Example2: B = 10 - ( 2 * 52.8125 ) = -95.625
+    const B = D - (2 * A);
+
+    // Now we know when to start deceleration
+    // Note if B is negative then we simply split the distance in two half for deccel and half for accel
+    const deccelAt = B < 0 ? D / 2 : A + B;
+
+    // The deccelAt position is an offset from current pos
+    this.deccelAt = this.backwards ? this.currentPosition - deccelAt : this.currentPosition + deccelAt; 
+
+    logger(`Determined we are going to start deccel at ${this.deccelAt}, A: ${A}, B: ${B}, D: ${D}, T1: ${T1}`);
 
     logger(`Goal: ${this.goalPosition}, Current ${this.currentPosition}, Backwards: ${this.backwards}`);
   }
@@ -621,6 +715,7 @@ export class Motor extends EventEmitter   {
     // Send frame
     this.channel.send(out);
 }
+
 /** ---------------------------------
  * save Position Proportional constant of the Motor Position PID
  *
@@ -628,6 +723,7 @@ export class Motor extends EventEmitter   {
 savePositionPParameter(kP) {
   this.saveParameter(3,0,kP);
 }
+
 /** ---------------------------------
  * save Position Integral constant of the Motor Position PID
  *
@@ -635,6 +731,7 @@ savePositionPParameter(kP) {
 savePositionIParameter(kI) {
   this.saveParameter(3,1,kI);
 }
+
 /** ---------------------------------
  * save Position Derivative constant of the Motor Position PID
  *
@@ -642,6 +739,7 @@ savePositionIParameter(kI) {
 savePositionDParameter(kD) {
   this.saveParameter(3,2,kD);
 }
+
 /** ---------------------------------
  * save Position AntiWindup constant of the Motor Position PID
  *
@@ -649,37 +747,39 @@ savePositionDParameter(kD) {
 savePositionAntiWindupParameter(kAW) {
   this.saveParameter(3,3,kAW);
 }
-  /** ---------------------------------
-   * Will get the current joint state 
-   * 
-   * Usecase for this will be for a UI to poll this periodically and update for user to view
-   */
-  get state(){
-    return {
-      id: this.id,
-      canId: this.canId,
-      homing: this.homing,
-      home: this.home,
-      currentPosition: this.currentPosition,
-      currentTics: this.currentTics,
-      encoderPulsePosition: this.encoderPulsePosition,
-      encoderPulseTics: this.encoderPulseTics,
-      jointPositionSetPoint: this.jointPositionSetPoint,
-      jointPositionSetTics: this.jointPositionSetTics,
-      goalPosition: this.goalPosition,
-      motorCurrent: this.motorCurrent,
-      errorCode: this.errorCode,
-      errorCodeString: this.errorCodeString ?? 'n/a',
-      voltage: this.voltage,
-      tempMotor: this.tempMotor,
-      tempBoard: this.tempBoard,
-      direction: this.backwards ? 'backwards' : 'forwards',
-      motorError: this.motorError,
-      adcError: this.adcError,
-      rebelError: this.rebelError,
-      controlError: this.controlError,
-      parameters: this.parameters
-    }
+
+/** ---------------------------------
+ * Will get the current joint state 
+ * 
+ * Usecase for this will be for a UI to poll this periodically and update for user to view
+ */
+get state(){
+  return {
+    id: this.id,
+    canId: this.canId,
+    homing: this.homing,
+    home: this.home,
+    currentPosition: this.currentPosition,
+    currentTics: this.currentTics,
+    encoderPulsePosition: this.encoderPulsePosition,
+    encoderPulseTics: this.encoderPulseTics,
+    jointPositionSetPoint: this.jointPositionSetPoint,
+    jointPositionSetTics: this.jointPositionSetTics,
+    goalPosition: this.goalPosition,
+    motorCurrent: this.motorCurrent,
+		error: this.error,
+    errorCode: this.errorCode,
+    errorCodeString: this.errorCodeString ?? 'n/a',
+    voltage: this.voltage,
+    tempMotor: this.tempMotor,
+    tempBoard: this.tempBoard,
+    direction: this.backwards ? 'backwards' : 'forwards',
+    motorError: this.motorError,
+    adcError: this.adcError,
+    rebelError: this.rebelError,
+    controlError: this.controlError,
+    parameters: this.parameters
   }
+}
 
 }

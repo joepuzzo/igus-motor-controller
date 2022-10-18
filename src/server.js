@@ -124,4 +124,14 @@ export const startServer = (config) => {
     logger("robot is disconnected from controller");
   });
 
+  socket.on('robotUpdateConfig', (key, value) => {
+    logger(`controller says robotUpdateConfig`);
+    robot.updateConfig(key, value);
+  });
+
+	socket.on('robotWriteConfig', () => {
+    logger(`controller says robotWriteConfig`);
+    robot.writeConfig();
+  });
+
 }

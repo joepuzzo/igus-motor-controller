@@ -56,7 +56,7 @@ export class Robot extends EventEmitter   {
     this.motorMap = {};
 
     // Each motor is tracked by a name 
-    this.motorMap.j0 = new Motor({id: 'j0', canId: 0x10, channel: this.channel });
+    this.motorMap.j0 = new Motor({id: 'j0', canId: 0x10, channel: this.channel, ...this.config.j0 });
 
     // Array for iteration
     this.motors = Object.values(this.motorMap);
@@ -353,17 +353,13 @@ export class Robot extends EventEmitter   {
     if (key.includes('.')) {
       const [joint, param] = key.split('.');
 
+      logger(`updating ${joint}'s ${param} to ${value}`, this.config[joint])
+
       // Update the config
       this.config[joint][param] = value;
 
       // Update the motor
       this.motorMap[joint][param] = value;
-
-      // Special case for limitAdj
-      if (param === 'limitAdj') {
-        logger('Updating limitAdj so we need to also update zero step');
-        this.motorMap[joint].updateZeroStep();
-      }
     } else {
       this.config[key] = value;
     }
