@@ -36,7 +36,7 @@ export class Motor extends EventEmitter   {
   /** -----------------------------------------------------------
    * Constructor
    */
-  constructor({ id, canId, channel, limNeg = -180, limPos = 180 }) {
+  constructor({ id, canId, channel, limNeg = -180, limPos = 180, accelEnabled = true }) {
 
     logger(`creating motor ${id} with canId ${canId}`);
 
@@ -56,6 +56,7 @@ export class Motor extends EventEmitter   {
     this.velocity = this.maxVelocity;         // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
     this.acceleration = 40;                   // The acceleration in degree / sec
+    this.accelEnabled = accelEnabled;         // If acceleration/deceleration is enabled
     this.motionScale = 0.3;                   // Scales the motion velocity
     this.limPos = limPos;                     // the limit in posative direction in degrees
     this.limNeg = limNeg;                     // the limit in negative direction in degrees
@@ -267,11 +268,11 @@ export class Motor extends EventEmitter   {
       //console.log('PAST', past);
 
       // Here we either accel or deccel based on where we are
-      if( this.deccelAt && past ){
+      if( this.accelEnabled && this.deccelAt && past ){
         // Decellerate
         console.log('DECELERATING', this.currentPosition);
         this.currentVelocity = this.currentVelocity - ( this.acceleration / 20 );
-      } else if( this.currentVelocity < this.velocity && !past ){
+      } else if(  this.accelEnabled && this.currentVelocity < this.velocity && !past ){
         // Accelerate
         console.log('ACCELERATING', this.currentPosition);
         // We want to accelerate and decelerate the motor over the course of its delta to goal
@@ -359,6 +360,7 @@ export class Motor extends EventEmitter   {
     this.currentVelocity = 0;
     this.goalPosition = position;
     this.backwards = this.goalPosition < this.currentPosition;
+    this.deccelAt = null;
 
     // Based on set acceleration there is a point where we need to start to deccel calculate that point
     // 
