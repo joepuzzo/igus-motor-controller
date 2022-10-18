@@ -36,7 +36,7 @@ export class Motor extends EventEmitter   {
   /** -----------------------------------------------------------
    * Constructor
    */
-  constructor({ id, canId, channel }) {
+  constructor({ id, canId, channel, limNeg = -180, limPos = 180 }) {
 
     logger(`creating motor ${id} with canId ${canId}`);
 
@@ -52,11 +52,13 @@ export class Motor extends EventEmitter   {
     this.cycleTime = 50;                      // in ms
     this.gearScale = 1031.11;                 // scale for iugs Rebel joint   
     this.encoderTics = 7424;					        // tics per revolution
-    this.maxVelocity = 105;                    // degree / sec
+    this.maxVelocity = 105;                   // degree / sec
     this.velocity = this.maxVelocity;         // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
     this.acceleration = 40;                   // The acceleration in degree / sec
     this.motionScale = 0.3;                   // Scales the motion velocity
+    this.limPos = limPos;                     // the limit in posative direction in degrees
+    this.limNeg = limNeg;                     // the limit in negative direction in degrees
     this.digitalOut = 0;                      // the wanted digital out channels
     this.digitalIn = 0;                       // the current digital int channels
     this.goalPosition = 0;                    // The joint goal position in degrees
@@ -341,7 +343,16 @@ export class Motor extends EventEmitter   {
    * @param {number} [velocity] - velocity in degrees / sec
    */
   setPosition( position, velocity, acceleration ) {
-    logger(`Set Pos to ${position} velocity ${velocity} acceleration ${acceleration}`);
+
+		// Safety check ( don't allow set pos to an angle outside the limits )
+    if( position > this.limPos || position < this.limNeg ){
+      logger(`ERROR: motor ${this.id} set position to ${position}º is outside the bounds of this motor!!!`);
+      this.error = 'OUT_OF_BOUNDS';
+      this.emit('motorError');
+      return;
+    }
+
+    logger(`Motor ${this.id} Set Pos to ${position} velocity ${velocity} acceleration ${acceleration}`);
     this.velocity = velocity ?? this.velocity;
     this.acceleration = acceleration ?? this.acceleration;
     //this.currentVelocity = this.velocity;
@@ -754,6 +765,7 @@ get state(){
     jointPositionSetTics: this.jointPositionSetTics,
     goalPosition: this.goalPosition,
     motorCurrent: this.motorCurrent,
+		error: this.error,
     errorCode: this.errorCode,
     errorCodeString: this.errorCodeString ?? 'n/a',
     voltage: this.voltage,
