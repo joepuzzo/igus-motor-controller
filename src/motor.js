@@ -52,7 +52,7 @@ export class Motor extends EventEmitter   {
     this.cycleTime = 50;                      // in ms
     this.gearScale = 1031.11;                 // scale for iugs Rebel joint   
     this.encoderTics = 7424;					        // tics per revolution
-    this.maxVelocity = 105;                   // degree / sec
+    this.maxVelocity = 30 * 3;                // degree / sec
     this.velocity = this.maxVelocity;         // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
     this.acceleration = 40;                   // The acceleration in degree / sec
@@ -138,6 +138,7 @@ export class Motor extends EventEmitter   {
 			const newTimestamp = Date.now();
       this.calculatedVelocity = (this.currentPosition - newPos) / ( newTimestamp - this.timestamp) * 1000;
       this.currentPosition = (pos - this.gearZero) / this.gearScale;
+      this.reportInterval = newTimestamp - this.timestamp;
 			this.timestamp = newTimestamp;
       //this.currentPosition = ( 360 / this.encoderTics ) * pos;
       this.currentTics = pos;
@@ -785,6 +786,7 @@ get state(){
     controlError: this.controlError,
     parameters: this.parameters,
     timestamp: this.timestamp,
+    reportInterval: this.reportInterval,
     calculatedVelocity: this.calculatedVelocity,
     currentVelocity: this.currentVelocity
   }
