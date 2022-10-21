@@ -76,6 +76,7 @@ export class Motor extends EventEmitter   {
     this.encoderPulsePosition = null;         // the current joint position in degrees sent by the heartbeat from motor 
     this.encoderPulseTics = null;
     this.parameters = { board: {}, motor: {}, axis: {}, control: {} };             // A place to store any read parameters 
+    this.calculatedVelocity = 0;
 
     // Our can channel
     this.channel = channel;
@@ -133,7 +134,11 @@ export class Motor extends EventEmitter   {
       this.errorCodeString = this.decodeError(this.errorCode);
       const pos = buff.readIntBE(1, 4); // TODO might need this? .toString(10); 
 
+      const newPos = (pos - this.gearZero) / this.gearScale;
+			const newTimestamp = Date.now();
+      this.calculatedVelocity = (this.currentPosition - newPos) / ( newTimestamp - this.timestamp) * 1000;
       this.currentPosition = (pos - this.gearZero) / this.gearScale;
+			this.timestamp = newTimestamp;
       //this.currentPosition = ( 360 / this.encoderTics ) * pos;
       this.currentTics = pos;
       this.motorCurrent = buff[6];
@@ -778,7 +783,10 @@ get state(){
     adcError: this.adcError,
     rebelError: this.rebelError,
     controlError: this.controlError,
-    parameters: this.parameters
+    parameters: this.parameters,
+    timestamp: this.timestamp,
+    calculatedVelocity: this.calculatedVelocity,
+    currentVelocity: this.currentVelocity
   }
 }
 
