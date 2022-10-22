@@ -26,6 +26,8 @@ function dec2bin(dec) {
   return (dec >>> 0).toString(2).padStart(8, '0');
 }
 
+const RATIO = 3.2;
+
 /**
  * Igus motor controller
  * 
@@ -54,7 +56,7 @@ export class Motor extends EventEmitter   {
     this.cycleTime = 50;                      // in ms
     this.gearScale = 1031.11;                 // scale for iugs Rebel joint = Gear Ratio x Encoder Ticks x 4 / 360 = Gear Scale
     this.encoderTics = 7424;					        // tics per revolution
-    this.maxVelocity = 30 * 4;                // degree / sec
+    this.maxVelocity = 35 * RATIO;            // degree / sec
     this.velocity = this.maxVelocity;         // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
     this.acceleration = 40;                   // The acceleration in degree / sec
@@ -140,7 +142,7 @@ export class Motor extends EventEmitter   {
 
       const newPos = (pos - this.gearZero) / this.gearScale;
 			const newTimestamp = Date.now();
-      this.calculatedVelocity = (this.currentPosition - newPos) / ( newTimestamp - this.timestamp) * 1000;
+      this.calculatedVelocity = (Math.abs(this.currentPosition - newPos)) / ( newTimestamp - this.timestamp) * 1000;
       this.currentPosition = (pos - this.gearZero) / this.gearScale;
       this.reportInterval = newTimestamp - this.timestamp;
 			this.timestamp = newTimestamp;
@@ -790,7 +792,7 @@ get state(){
     timestamp: this.timestamp,
     reportInterval: this.reportInterval,
     calculatedVelocity: this.calculatedVelocity,
-    currentVelocity: this.currentVelocity
+    currentVelocity: this.currentVelocity / RATIO
   }
 }
 
