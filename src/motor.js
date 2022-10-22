@@ -679,7 +679,7 @@ export class Motor extends EventEmitter   {
       logger(`query parameter ${this.id} index ${index} subindex ${subindex}`);
 
       // Create buffer for data
-      const buff = Buffer.alloc(8)
+      const buff = Buffer.alloc(3)
 
       // Set data 
       buff[0] = 0x96;                                           // First byte denominates the command, here: Read parameters 0x96
