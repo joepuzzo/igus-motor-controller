@@ -8,13 +8,15 @@ const logger = Debug('igus:motor' + '\t');
 const codes = ['OC', 'DRV', 'ENC', 'LAG', 'COM', 'MNE', 'ESTOP', 'TEMP'];
 
 // Parameter index mapping
-const parameterMapping = ['board', 'motor', 'axis', 'control'];
+const parameterMapping = ['board', 'motor', 'axis', 'control', 'com'];
 
 // Parameter subindex mapping
 const subindexMapping = {
   board: ['serialNo', 'firmwareversion', 'hardwareNo', 'minVoltage', 'maxTemp'],
   motor: ['encoderTics', 'poleParis', null, null, 'maxRpm', 'maxTemp', 'maxCurrent', 'startUpMethod', null, 'encoderInverted'],
   axis: [null, 'referenceType', 'referenceOffset', 'referenceSpeed', 'referenceSpeedSlow', 'referenceSwitchType', 'maxPos', 'breakType'],
+  control: [],
+  com: ['canMaxMisses', 'canIdSource', 'canId', 'spiActive']
 }
 
 // Helper
@@ -50,9 +52,9 @@ export class Motor extends EventEmitter   {
     this.home = false;                        // if the motor is currently home
     this.enabled = false;                     // if motor is enabled
     this.cycleTime = 50;                      // in ms
-    this.gearScale = 1031.11;                 // scale for iugs Rebel joint   
+    this.gearScale = 1031.11;                 // scale for iugs Rebel joint = Gear Ratio x Encoder Ticks x 4 / 360 = Gear Scale
     this.encoderTics = 7424;					        // tics per revolution
-    this.maxVelocity = 30 * 3;                // degree / sec
+    this.maxVelocity = 30 * 4;                // degree / sec
     this.velocity = this.maxVelocity;         // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
     this.acceleration = 40;                   // The acceleration in degree / sec
@@ -75,7 +77,7 @@ export class Motor extends EventEmitter   {
     this.gearZero = 0;                        // zero pos for gear
     this.encoderPulsePosition = null;         // the current joint position in degrees sent by the heartbeat from motor 
     this.encoderPulseTics = null;
-    this.parameters = { board: {}, motor: {}, axis: {}, control: {} };             // A place to store any read parameters 
+    this.parameters = { board: {}, motor: {}, axis: {}, control: {}, com: {} };             // A place to store any read parameters 
     this.calculatedVelocity = 0;
 
     // Our can channel
@@ -125,6 +127,8 @@ export class Motor extends EventEmitter   {
       const index = buff[1];
       const subindex = buff[2];
       const data = buff.readIntBE(3,4);
+      console.log(buff);
+      logger(`Parameter Read index: ${index}, subindex: ${subindex}, data: ${data}`);
       const section = parameterMapping[index];
       const parameter = subindexMapping[section][subindex];
       this.parameters[section][parameter] = data;
@@ -475,12 +479,10 @@ export class Motor extends EventEmitter   {
     this.emit('calibrating');
 
     // Create buffer for data
-    const buff = Buffer.alloc(4)
+    const buff = Buffer.alloc(2)
 
     buff[0] = 0x01;
     buff[1] = 0x0C;
-    buff[2] = 0x00;
-    buff[3] = 0x00;
 
     // Stop sending pos updates
     this.stopped = true;
