@@ -56,7 +56,7 @@ export class Motor extends EventEmitter   {
     this.cycleTime = 50;                      // in ms
     this.gearScale = 1031.11;                 // scale for iugs Rebel joint = Gear Ratio x Encoder Ticks x 4 / 360 = Gear Scale
     this.encoderTics = 7424;					        // tics per revolution
-    this.maxVelocity = 35 * RATIO;            // degree / sec
+    this.maxVelocity = 30 * RATIO;            // degree / sec
     this.velocity = this.maxVelocity;         // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
     this.acceleration = 40;                   // The acceleration in degree / sec
@@ -180,15 +180,15 @@ export class Motor extends EventEmitter   {
     if(buff[0] == 0xEF){
 
       // Position of the output drive in deg / 100
-      let pos = buff.readIntBE(4, 4); // TODO might need this? .toString(10); 
-      pos = pos * 10;
+      let pos = buff.readIntBE(4, 4);
 
-      const inDegrees = pos / this.gearScale; //( 360 / this.encoderTics) * pos;
+      const inDegrees = pos / 100;
 
       if( this.encoderPulsePosition == null ){
         // First time so initialize the current pos to this
         this.currentPosition = inDegrees;
 				this.currentTics = pos;
+        this.goalPosition = inDegrees;
         // Need to initialize the direction we will move to get to start goal ( 0 )
         this.backwards = this.goalPosition < this.currentPosition;
         //this.stopped = false;
