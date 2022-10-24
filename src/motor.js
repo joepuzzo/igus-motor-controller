@@ -40,7 +40,7 @@ export class Motor extends EventEmitter   {
   /** -----------------------------------------------------------
    * Constructor
    */
-  constructor({ id, canId, channel, limNeg = -180, limPos = 180, accelEnabled = true }) {
+  constructor({ id, canId, channel, cycleTime = 50, limNeg = -180, limPos = 180, accelEnabled = true }) {
 
     logger(`creating motor ${id} with canId ${canId}`);
 
@@ -53,7 +53,8 @@ export class Motor extends EventEmitter   {
     this.homing = false;                      // if motor is process of homing
     this.home = false;                        // if the motor is currently home
     this.enabled = false;                     // if motor is enabled
-    this.cycleTime = 50;                      // in ms
+    this.cycleTime = cycleTime;               // in ms .. example: 50ms
+    this.cyclesPerSec = 1000/this.cycleTime;  // how many cycles per second  
     this.gearScale = 1031.11;                 // scale for iugs Rebel joint = Gear Ratio x Encoder Ticks x 4 / 360 = Gear Scale
     this.encoderTics = 7424;					        // tics per revolution
     this.maxVelocity = 30 * RATIO;            // degree / sec
@@ -283,14 +284,14 @@ export class Motor extends EventEmitter   {
       if( this.accelEnabled && this.deccelAt && past ){
         // Decellerate
         console.log('DECELERATING', this.currentPosition);
-        this.currentVelocity = this.currentVelocity - ( this.acceleration / 20 );
+        this.currentVelocity = this.currentVelocity - ( this.acceleration / this.cyclesPerSec );
       } else if(  this.accelEnabled && this.currentVelocity < this.velocity && !past ){
         // Accelerate
         console.log('ACCELERATING', this.currentPosition);
         // We want to accelerate and decelerate the motor over the course of its delta to goal
-        // acceleration is in °/s && there are 20 cycles in 1 second
+        // acceleration is in °/s && Example: there are 20 cycles in 1 second
         // therefore we break acceleration down by 20, increasing by 1/20th every cycle 
-        this.currentVelocity = this.currentVelocity + ( this.acceleration / 20 );
+        this.currentVelocity = this.currentVelocity + ( this.acceleration / this.cyclesPerSec );
       } else { 
         console.log('CRUSING', this.currentPosition);
         this.currentVelocity = this.velocity;

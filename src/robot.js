@@ -56,7 +56,7 @@ export class Robot extends EventEmitter   {
     this.motorMap = {};
 
     // Each motor is tracked by a name 
-    this.motorMap.j0 = new Motor({id: 'j0', canId: 0x10, channel: this.channel, ...this.config.j0 });
+    this.motorMap.j0 = new Motor({id: 'j0', canId: 0x10, channel: this.channel, cycleTime: this.cycleTime, ...this.config.j0 });
 
     // Array for iteration
     this.motors = Object.values(this.motorMap);
