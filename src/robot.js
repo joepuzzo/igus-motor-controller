@@ -33,7 +33,7 @@ export class Robot extends EventEmitter   {
     // Define parameters
     this.id = id;
     this.uiFrequency = 1000;          // time in ms to update the ui
-    this.cycleTime = 50;              // time in ms to push updates to motors
+    this.cycleTime = 20;              // time in ms to push updates to motors
     this.stopped = false;             // will disable position sends
     this.ready = false;               // if robot is ready
     this.home = false;                // if the robot is currently home
