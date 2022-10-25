@@ -110,6 +110,11 @@ export const startServer = (config) => {
     robot.robotStop();
   });
 
+  socket.on('robotFreeze', () => {
+    logger(`controller says robotFreeze`);
+    robot.robotFreeze();
+  });
+
   socket.on('robotEnable', () => {
     logger(`controller says robotEnable`);
     robot.robotEnable();
@@ -122,6 +127,11 @@ export const startServer = (config) => {
 
   socket.on('disconnect', () => {
     logger("robot is disconnected from controller");
+  });
+
+  socket.on('robotResetErrors', () => {
+    logger(`controller says robotResetErrors`);
+    robot.robotReset();
   });
 
   socket.on('robotUpdateConfig', (key, value) => {
