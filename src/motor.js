@@ -26,7 +26,7 @@ function dec2bin(dec) {
   return (dec >>> 0).toString(2).padStart(8, '0');
 }
 
-const RATIO = 3.3;
+const RATIO = 3.5;
 
 /**
  * Igus motor controller
@@ -143,10 +143,10 @@ export class Motor extends EventEmitter   {
 
       const newPos = (pos - this.gearZero) / this.gearScale;
 			const newTimestamp = Date.now();
-      this.calculatedVelocity = (Math.abs(this.currentPosition - newPos)) / ( newTimestamp - this.timestamp) * 1000;
+      this.calculatedVelocity = (Math.abs(this.currentPosition - newPos)) / ( newTimestamp - this.reportTimestamp) * 1000;
       this.currentPosition = (pos - this.gearZero) / this.gearScale;
-      this.reportInterval = newTimestamp - this.timestamp;
-			this.timestamp = newTimestamp;
+      this.reportInterval = newTimestamp - this.reportTimestamp;
+			this.reportTimestamp = newTimestamp;
       //this.currentPosition = ( 360 / this.encoderTics ) * pos;
       this.currentTics = pos;
       this.motorCurrent = buff[6];
@@ -345,6 +345,11 @@ export class Motor extends EventEmitter   {
       id: this.canId,
       data: buff
     };
+
+  
+    const newTimestamp = Date.now();
+    this.sendInterval = newTimestamp - this.sendTimestamp;
+	  this.sendTimestamp = newTimestamp;
   
     // Send that shit!
     this.channel.send(out)
@@ -790,8 +795,10 @@ get state(){
     rebelError: this.rebelError,
     controlError: this.controlError,
     parameters: this.parameters,
-    timestamp: this.timestamp,
+    timestamp: this.reportTimestamp,
     reportInterval: this.reportInterval,
+    sendTimestamp: this.sendTimestamp,
+    sendInterval: this.sendInterval,
     calculatedVelocity: this.calculatedVelocity,
     currentVelocity: this.currentVelocity / RATIO
   }

@@ -11,6 +11,8 @@ import fs from 'fs';
 import { Debug } from './debug.js';
 const logger = Debug('igus:robot' + '\t');
 
+import NanoTimer from 'nanotimer';
+
 /**
  * Igus robot controller
  * 
@@ -80,9 +82,15 @@ export class Robot extends EventEmitter   {
   start() {
 
     // Will write every 50ms ( frequency for controller)
-    setInterval(() => {
-      this.writeJointSetPoints();
-    }, this.cycleTime);
+    //setInterval(() => {
+    //  this.writeJointSetPoints();
+    //}, this.cycleTime);
+ 
+		const timer = new NanoTimer();
+
+		timer.setInterval(()=>{
+    	this.writeJointSetPoints();
+		}, '', `${this.cycleTime}m`);
 
     // Will push updates to ui 
     setInterval(() => {
