@@ -52,6 +52,7 @@ export class Motor extends EventEmitter   {
     this.canId = canId;                       // motor canId
     this.homing = false;                      // if motor is process of homing
     this.home = false;                        // if the motor is currently home
+    this.ready = false;                       // if motor is ready
     this.enabled = false;                     // if motor is enabled
     this.cycleTime = cycleTime;               // in ms .. example: 50ms
     this.cyclesPerSec = 1000/this.cycleTime;  // how many cycles per second  
@@ -114,6 +115,7 @@ export class Motor extends EventEmitter   {
 
     // We are ready
     logger(`motor with id ${this.id} is ready`);
+    this.ready = true;
     this.emit('ready');
   }
 
@@ -773,6 +775,8 @@ get state(){
   return {
     id: this.id,
     canId: this.canId,
+    ready: this.ready, 
+    enabled: this.enabled,
     homing: this.homing,
     home: this.home,
     currentPosition: this.currentPosition,
