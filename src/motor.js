@@ -63,7 +63,7 @@ export class Motor extends EventEmitter   {
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
     this.acceleration = 40;                   // The acceleration in degree / sec
     this.accelEnabled = accelEnabled;         // If acceleration/deceleration is enabled
-    this.motionScale = 0.25;                  // Scales the motion velocity
+    this.motionScale = 0.27;                  // Scales the motion velocity
     this.limPos = limPos;                     // the limit in posative direction in degrees
     this.limNeg = limNeg;                     // the limit in negative direction in degrees
     this.digitalOut = 0;                      // the wanted digital out channels
@@ -265,8 +265,9 @@ export class Motor extends EventEmitter   {
 
     //console.log(`DISTANCE ${distance}`);
 
-    // If we are within two degrees just set set point to there
-		if( distance < 1 ){
+    // If we are within tolerance just set set point to there
+    const tolerance = this.accelEnabled ? 0.5 : 2;
+		if( distance < tolerance ){
 			this.jointPositionSetPoint = this.goalPosition;
       //logger(`Finished movement to ${this.currentPosition}`);
 		} else if( this.enabled )  {
