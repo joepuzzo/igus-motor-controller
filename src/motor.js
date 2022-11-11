@@ -286,17 +286,17 @@ export class Motor extends EventEmitter   {
       // Here we either accel or deccel based on where we are
       if( this.accelEnabled && this.deccelAt && past ){
         // Decellerate
-        console.log('DECELERATING', this.currentPosition);
+        //console.log('DECELERATING', this.currentPosition);
         this.currentVelocity = this.currentVelocity - ( this.acceleration / this.cyclesPerSec );
       } else if(  this.accelEnabled && this.currentVelocity < this.velocity && !past ){
         // Accelerate
-        console.log('ACCELERATING', this.currentPosition);
+        //console.log('ACCELERATING', this.currentPosition);
         // We want to accelerate and decelerate the motor over the course of its delta to goal
         // acceleration is in °/s && Example: there are 20 cycles in 1 second
         // therefore we break acceleration down by 20, increasing by 1/20th every cycle 
         this.currentVelocity = this.currentVelocity + ( this.acceleration / this.cyclesPerSec );
       } else { 
-        console.log('CRUSING', this.currentPosition);
+        //console.log('CRUSING', this.currentPosition);
         this.currentVelocity = this.velocity;
       }
 
