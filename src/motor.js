@@ -56,7 +56,7 @@ export class Motor extends EventEmitter   {
     this.enabled = false;                     // if motor is enabled
     this.cycleTime = cycleTime;               // in ms .. example: 50ms
     this.cyclesPerSec = 1000/this.cycleTime;  // how many cycles per second  
-    this.gearScale = 1031.11;                 // scale for iugs Rebel joint = Gear Ratio x Encoder Ticks x 4 / 360 = Gear Scale
+    this.gearScale = 1031.11;                 // scale for iugs Rebel joint = Gear Ratio x Encoder Ticks / 360 = Gear Scale
     this.encoderTics = 7424;					        // tics per revolution
     this.maxVelocity = 30 * RATIO;            // degree / sec
     this.velocity = this.maxVelocity;         // Initial velocity is max
