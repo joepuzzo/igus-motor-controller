@@ -60,11 +60,11 @@ export class Robot extends EventEmitter   {
     // Each motor is tracked by a name 
     // 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50
     this.motorMap.j0 = new Motor({id: 'j0', canId: 0x10, channel: this.channel, cycleTime: this.cycleTime, ...this.config.j0 });
-    this.motorMap.j1 = new Motor({id: 'j1', canId: 0x18, channel: this.channel, cycleTime: this.cycleTime, ...this.config.j1 });
-    this.motorMap.j2 = new Motor({id: 'j2', canId: 0x20, channel: this.channel, cycleTime: this.cycleTime, ...this.config.j2 });
-    this.motorMap.j3 = new Motor({id: 'j3', canId: 0x28, channel: this.channel, cycleTime: this.cycleTime, ...this.config.j3 });
-    this.motorMap.j4 = new Motor({id: 'j4', canId: 0x30, channel: this.channel, cycleTime: this.cycleTime, ...this.config.j4 });
-    this.motorMap.j5 = new Motor({id: 'j5', canId: 0x38, channel: this.channel, cycleTime: this.cycleTime, ...this.config.j5 });
+    this.motorMap.j1 = new Motor({id: 'j1', canId: 0x20, channel: this.channel, cycleTime: this.cycleTime, ...this.config.j1 });
+    this.motorMap.j2 = new Motor({id: 'j2', canId: 0x30, channel: this.channel, cycleTime: this.cycleTime, ...this.config.j2 });
+    this.motorMap.j3 = new Motor({id: 'j3', canId: 0x40, channel: this.channel, cycleTime: this.cycleTime, ...this.config.j3 });
+    this.motorMap.j4 = new Motor({id: 'j4', canId: 0x50, channel: this.channel, cycleTime: this.cycleTime, ...this.config.j4 });
+    this.motorMap.j5 = new Motor({id: 'j5', canId: 0x60, channel: this.channel, cycleTime: this.cycleTime, ...this.config.j5 });
 
     // Array for iteration
     this.motors = Object.values(this.motorMap);

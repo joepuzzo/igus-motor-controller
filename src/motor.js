@@ -40,7 +40,7 @@ export class Motor extends EventEmitter   {
   /** -----------------------------------------------------------
    * Constructor
    */
-  constructor({ id, canId, channel, cycleTime = 50, limNeg = -180, limPos = 180, accelEnabled = true }) {
+  constructor({ id, canId, channel, cycleTime = 50, limNeg = -180, limPos = 180, accelEnabled = false, offset = 0 }) {
 
     logger(`creating motor ${id} with canId ${canId}`);
 
@@ -58,7 +58,7 @@ export class Motor extends EventEmitter   {
     this.cyclesPerSec = 1000/this.cycleTime;  // how many cycles per second  
     this.gearScale = 1031.11;                 // scale for iugs Rebel joint = Gear Ratio x Encoder Ticks / 360 = Gear Scale
     this.encoderTics = 7424;					        // tics per revolution
-    this.maxVelocity = 30 * RATIO;            // degree / sec
+    this.maxVelocity = 20 * RATIO;            // degree / sec
     this.velocity = this.maxVelocity;         // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
     this.acceleration = 40;                   // The acceleration in degree / sec
@@ -83,6 +83,7 @@ export class Motor extends EventEmitter   {
     this.encoderPulseTics = null;
     this.parameters = { board: {}, motor: {}, axis: {}, control: {}, com: {} };             // A place to store any read parameters 
     this.calculatedVelocity = 0;
+    this.offset = offset;
 
     // Our can channel
     this.channel = channel;
@@ -172,7 +173,7 @@ export class Motor extends EventEmitter   {
       const rebelError = buff[3];
       const controlError = buff[4];
       if( motorError || adcError || rebelError || controlError ){
-        logger(`Error`, buff[1], buff[2], buff[3], buff[4]);
+        logger(`Error motor ${this.id}`, buff[1], buff[2], buff[3], buff[4]);
         this.motorError = motorError;
         this.adcError = adcError;
         this.rebelError = rebelError;
@@ -185,7 +186,13 @@ export class Motor extends EventEmitter   {
       // Position of the output drive in deg / 100
       let pos = buff.readIntBE(4, 4);
 
-      const inDegrees = pos / 100;
+      let inDegrees = pos / 100;
+
+      // Bug at 180deg initialization
+      if(Math.abs(inDegrees) === 180){
+        pos = 0;
+        inDegrees = 0;
+      }
 
       if( this.encoderPulsePosition == null ){
         // First time so initialize the current pos to this
@@ -258,18 +265,27 @@ export class Motor extends EventEmitter   {
       return;
     }
 
-    // first we need to compute our position 
-
     // How far are we from our goal
     const distance = Math.abs(this.goalPosition - this.currentPosition);
 
-    //console.log(`DISTANCE ${distance}`);
-
+    //console.log(`DISTANCE ${distance}`);    
+   
+    // Slow down when we are within 5 degrees
+    if( distance < 2 && !this.accelEnabled ) {
+      this.currentVelocity = 10 * RATIO;
+    }
+     
     // If we are within tolerance just set set point to there
-    const tolerance = this.accelEnabled ? 0.5 : 2;
-		if( distance < tolerance ){
+    const TOLERANCE = 0.5;
+
+		if( distance < TOLERANCE ){
+      // Set point to goal
 			this.jointPositionSetPoint = this.goalPosition;
-      //logger(`Finished movement to ${this.currentPosition}`);
+      // When we are really close just callit quits
+      if( distance < 0.1 ) { 
+        //this.goalPosition = this.currentPosition;
+        this.jointPositionSetPoint = this.currentPosition;
+      }
 		} else if( this.enabled )  {
 
       // Basically we are increasing the goal degs by our movement segments
@@ -277,6 +293,9 @@ export class Motor extends EventEmitter   {
       // note: we may have case where we are going from 45 to 40 where the dif is 40 - 45 ===> -5
       // in this case we want to go other direction
       const neg = this.goalPosition < this.currentPosition;
+
+
+      /*---------------------------------- For ACCEL -------------------------------------------*/
 
       // Determine if we are past the deccel point
       const past = neg ? this.currentPosition < this.deccelAt : this.currentPosition > this.deccelAt;
@@ -295,17 +314,17 @@ export class Motor extends EventEmitter   {
         // acceleration is in °/s && Example: there are 20 cycles in 1 second
         // therefore we break acceleration down by 20, increasing by 1/20th every cycle 
         this.currentVelocity = this.currentVelocity + ( this.acceleration / this.cyclesPerSec );
-      } else { 
+      } else if( this.accelEnabled ) { 
         //console.log('CRUSING', this.currentPosition);
         this.currentVelocity = this.velocity;
       }
 
-  		// Safety check, we don't want to go over set velocity
-    	if( this.currentVelocity > this.velocity ){
-      	this.currentVelocity = this.velocity;
-    	}
+      // Safety check, we don't want to go over set velocity
+      if( this.currentVelocity > this.velocity ){
+       	this.currentVelocity = this.velocity;
+      }
 
-    	//console.log(`VELOCITY`, this.currentVelocity);
+      /*----------------------------------------------------------------------------------------*/
 
       // vel ist in °/s so we need to break it down into our cycle segments
       // Example: (50 / 1000 ) * 45 = 2.25 deg per cycle
@@ -364,10 +383,14 @@ export class Motor extends EventEmitter   {
    * @param {number} position - Position to go in degrees
    * @param {number} [velocity] - velocity in degrees / sec
    */
-  setPosition( position, velocity, acceleration ) {
+  setPosition( pos, velocity = this.maxVelocity, acceleration ) {
+
+    //this.resetEnable();
+
+    const position = pos + this.offset;
 
 		// Safety check ( don't allow set pos to an angle outside the limits )
-    if( position > this.limPos || position < this.limNeg ){
+    if( position > this.limPos + this.offset || position < this.limNeg + this.offset ){
       logger(`ERROR: motor ${this.id} set position to ${position}º is outside the bounds of this motor!!!`);
       this.error = 'OUT_OF_BOUNDS';
       this.emit('motorError');
@@ -377,8 +400,7 @@ export class Motor extends EventEmitter   {
     logger(`Motor ${this.id} Set Pos to ${position} velocity ${velocity} acceleration ${acceleration}`);
     this.velocity = velocity ?? this.velocity;
     this.acceleration = acceleration ?? this.acceleration;
-    //this.currentVelocity = this.velocity;
-    this.currentVelocity = 0;
+    this.currentVelocity = this.accelEnabled ? 0 : this.velocity;
     this.goalPosition = position;
     this.backwards = this.goalPosition < this.currentPosition;
     this.deccelAt = null;
@@ -646,6 +668,14 @@ export class Motor extends EventEmitter   {
       this.emit('reset');
     }, 5)
     
+  }
+
+  resetEnable() {
+    this.reset();
+
+    setTimeout(()=>{
+      this.enable();
+    },100);
   }
 
    /** ---------------------------------
