@@ -157,7 +157,7 @@ export class Robot extends EventEmitter   {
   /* -------------------- Motor Actions -------------------- */
 
   motorSetPosition(id, position, velocity){
-    logger(`set position for motor ${id} velocity ${velocity}`);
+    logger(`set position to ${position} for motor ${id} velocity ${velocity}`);
     this.motorMap[id].setPosition(position, velocity)
   }
 
@@ -278,6 +278,18 @@ export class Robot extends EventEmitter   {
     });     
 
     this.emit("meta");
+  }
+
+  robotSetAngles(angles, speed){
+    logger(`robotSetAngles at speed ${speed} angles:`, angles);
+
+    // We are moving whole robot
+    this.moving = true;
+
+    // Set each motor angle
+    this.motors.forEach( (motor, i) => {
+      motor.setPosition(angles[i], speed);
+    });
   }
 
   /** ---------------------------------

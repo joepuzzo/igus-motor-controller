@@ -125,6 +125,11 @@ export const startServer = (config) => {
     robot.robotCenter();
   });
 
+  socket.on('robotSetAngles', (angles, speed) => {
+    logger(`controller says robotSetAngles`);
+    robot.robotSetAngles(angles, speed);
+  });
+
   socket.on('disconnect', () => {
     logger("robot is disconnected from controller");
   });
