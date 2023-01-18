@@ -26,7 +26,7 @@ function dec2bin(dec) {
   return (dec >>> 0).toString(2).padStart(8, '0');
 }
 
-const RATIO = 3.5;
+const RATIO = 4.25;
 
 /**
  * Igus motor controller
@@ -63,7 +63,7 @@ export class Motor extends EventEmitter   {
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
     this.acceleration = 40;                   // The acceleration in degree / sec
     this.accelEnabled = accelEnabled;         // If acceleration/deceleration is enabled
-    this.motionScale = 0.27;                  // Scales the motion velocity
+    this.motionScale = 0.24;                  // Scales the motion velocity
     this.limPos = limPos;                     // the limit in posative direction in degrees
     this.limNeg = limNeg;                     // the limit in negative direction in degrees
     this.digitalOut = 0;                      // the wanted digital out channels
