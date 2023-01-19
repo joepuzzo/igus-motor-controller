@@ -40,7 +40,7 @@ export class Motor extends EventEmitter   {
   /** -----------------------------------------------------------
    * Constructor
    */
-  constructor({ id, canId, channel, cycleTime = 50, limNeg = -180, limPos = 180, accelEnabled = false, offset = 0 }) {
+  constructor({ id, canId, channel, cycleTime = 50, limNeg = -180, limPos = 180, accelEnabled = false, offset = 0, flip = false }) {
 
     logger(`creating motor ${id} with canId ${canId}`);
 
@@ -84,6 +84,7 @@ export class Motor extends EventEmitter   {
     this.parameters = { board: {}, motor: {}, axis: {}, control: {}, com: {} };             // A place to store any read parameters 
     this.calculatedVelocity = 0;
     this.offset = offset;
+    this.flip = flip;
 
     // Our can channel
     this.channel = channel;
@@ -387,7 +388,9 @@ export class Motor extends EventEmitter   {
 
     //this.resetEnable();
 
-    const position = pos + this.offset;
+    let position = pos + this.offset;
+
+    if( this.flip ) position = -position;
 
 		// Safety check ( don't allow set pos to an angle outside the limits )
     if( position > this.limPos + this.offset || position < this.limNeg + this.offset ){
@@ -810,13 +813,13 @@ get state(){
     enabled: this.enabled,
     homing: this.homing,
     home: this.home,
-    currentPosition: this.currentPosition,
-    currentTics: this.currentTics,
-    encoderPulsePosition: this.encoderPulsePosition,
-    encoderPulseTics: this.encoderPulseTics,
-    jointPositionSetPoint: this.jointPositionSetPoint,
-    jointPositionSetTics: this.jointPositionSetTics,
-    goalPosition: this.goalPosition,
+    currentPosition: this.flip ? -this.currentPosition : this.currentPosition,
+    currentTics: this.flip ? -this.currentTics : this.currentTics,
+    encoderPulsePosition: this.flip ? -this.encoderPulsePosition : this.encoderPulsePosition,
+    encoderPulseTics: this.flip ? -this.encoderPulseTics : this.encoderPulseTics,
+    jointPositionSetPoint: this.flip ? -this.jointPositionSetPoint : this.jointPositionSetPoint,
+    jointPositionSetTics: this.flip ? -this.jointPositionSetTics : this.jointPositionSetTics,
+    goalPosition: this.flip ? -this.goalPosition : this.goalPosition,
     motorCurrent: this.motorCurrent,
 		error: this.error,
     errorCode: this.errorCode,
