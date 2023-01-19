@@ -388,19 +388,24 @@ export class Motor extends EventEmitter   {
 
     //this.resetEnable();
 
-    let position = pos + this.offset;
+    let position = pos;
 
-    if( this.flip ) position = -position;
+    if( this.flip ) {
+      position = -position;
+      position = position - this.offset;
+    } else { 
+      position = position + this.offset;
+    }
 
 		// Safety check ( don't allow set pos to an angle outside the limits )
-    if( position > this.limPos + this.offset || position < this.limNeg + this.offset ){
-      logger(`ERROR: motor ${this.id} set position to ${position}º is outside the bounds of this motor!!!`);
+    if( pos > this.limPos || pos < this.limNeg ){
+      logger(`ERROR: motor ${this.id} set position to ${pos}º is outside the bounds of this motor!!!`);
       this.error = 'OUT_OF_BOUNDS';
       this.emit('motorError');
       return;
     }
 
-    logger(`Motor ${this.id} Set Pos to ${position} velocity ${velocity} acceleration ${acceleration}`);
+    logger(`Motor ${this.id} Set Pos to ${pos} velocity ${velocity} acceleration ${acceleration}`);
     this.velocity = velocity ?? this.velocity;
     this.acceleration = acceleration ?? this.acceleration;
     this.currentVelocity = this.accelEnabled ? 0 : this.velocity;
