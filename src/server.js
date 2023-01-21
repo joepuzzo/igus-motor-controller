@@ -149,4 +149,9 @@ export const startServer = (config) => {
     robot.writeConfig();
   });
 
+	socket.on('robotAccelEnabled', (value) => {
+    logger(`controller says robotAccelEnabled to ${value}`);
+    robot.robotAccelEnabled(value);
+  });
+
 }

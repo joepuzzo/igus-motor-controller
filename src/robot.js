@@ -260,11 +260,13 @@ export class Robot extends EventEmitter   {
     this.stopped = false;
 
     // Enable all motors
-    this.motors.forEach(motor => {
-      motor.reset();
+    this.motors.forEach((motor, i) => {
+      setTimeout(()=>{
+        motor.reset();
+        this.emit("meta");
+      }, 700 * i)
     });     
 
-    this.emit("meta");
   }
 
   robotEnable(){
@@ -273,11 +275,13 @@ export class Robot extends EventEmitter   {
     this.stopped = false;
 
     // Enable all motors
-    this.motors.forEach(motor => {
-      motor.enable();
+    this.motors.forEach((motor, i) => {
+      setTimeout(()=>{
+        motor.enable();
+        this.emit("meta");
+      }, 1000 * i)
     });     
 
-    this.emit("meta");
   }
 
   robotSetAngles(angles, speed){
@@ -289,6 +293,14 @@ export class Robot extends EventEmitter   {
     // Set each motor angle
     this.motors.forEach( (motor, i) => {
       motor.setPosition(angles[i], speed);
+    });
+  }
+
+  robotAccelEnabled(value){
+    logger(`robotAccelEnabled to ${value}`);
+    // Turn on accel for all motors
+    this.motors.forEach( (motor, i) => {
+    	this.updateConfig(`${motor.id}.accelEnabled`, value)
     });
   }
 
