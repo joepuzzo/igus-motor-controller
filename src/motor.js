@@ -58,12 +58,12 @@ export class Motor extends EventEmitter   {
     this.cyclesPerSec = 1000/this.cycleTime;  // how many cycles per second  
     this.gearScale = 1031.11;                 // scale for iugs Rebel joint = Gear Ratio x Encoder Ticks / 360 = Gear Scale
     this.encoderTics = 7424;					        // tics per revolution
-    this.maxVelocity = 20 * RATIO;            // degree / sec
+    this.maxVelocity = 30 * RATIO;            // degree / sec
     this.velocity = this.maxVelocity;         // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
     this.acceleration = 40;                   // The acceleration in degree / sec
     this.accelEnabled = accelEnabled;         // If acceleration/deceleration is enabled
-    this.motionScale = 0.24;                  // Scales the motion velocity
+    this.motionScale = 0.22;                  // Scales the motion velocity
     this.limPos = limPos;                     // the limit in posative direction in degrees
     this.limNeg = limNeg;                     // the limit in negative direction in degrees
     this.digitalOut = 0;                      // the wanted digital out channels

@@ -106,7 +106,7 @@ export class Robot extends EventEmitter   {
     // Report all encoder updates at 100ms interval
     setInterval(()=>{
     	this.emit('encoder');
-    }, 100);
+    }, 500);
 
     logger(`robot with id ${this.id} is ready`);
     this.ready = true;
