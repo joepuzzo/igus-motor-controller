@@ -85,6 +85,7 @@ export class Motor extends EventEmitter   {
     this.calculatedVelocity = 0;
     this.offset = offset;
     this.flip = flip;
+    this.moving = false;                      // if motor is in motion
 
     // Our can channel
     this.channel = channel;
@@ -286,6 +287,12 @@ export class Motor extends EventEmitter   {
       if( distance < 0.1 ) { 
         //this.goalPosition = this.currentPosition;
         this.jointPositionSetPoint = this.currentPosition;
+        // If we are here we are done moving
+        if( this.moving ){
+          logger(`Motor ${this.id} is done moving.`);
+          this.moving = false;
+          this.emit('moved', this.id);
+        }
       }
 		} else if( this.enabled )  {
 
@@ -404,6 +411,9 @@ export class Motor extends EventEmitter   {
       this.emit('motorError');
       return;
     }
+
+    // We are now considered to be moving so set this flag
+    this.moving = true;
 
     logger(`Motor ${this.id} Set Pos to ${pos} velocity ${velocity} acceleration ${acceleration}`);
     this.velocity = velocity ?? this.velocity;

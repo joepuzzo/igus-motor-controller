@@ -76,6 +76,7 @@ export class Robot extends EventEmitter   {
       motor.on('disabled', () => this.robotState() );
       motor.on('enabled', () => this.robotState() );
       motor.on('reset', () => this.robotState() );
+      motor.on('moved', (id) => this.motorMoved(id) );
     });
 
     // Start robot
@@ -118,6 +119,25 @@ export class Robot extends EventEmitter   {
    * Will trigger a robot state update 
    */
   robotState(){
+    this.emit('state');
+  }
+
+  /** ---------------------------------
+   * Will take any actions needed when a motor is done moving
+   */
+  motorMoved(id) {
+    logger(`motor ${id} moved`);
+
+    // If we are moving robot to a position check if its done
+    if(this.moving){
+      if(this.motors.every( motor => !motor.moving)){
+        logger(`all motors have moved!`);
+        this.moving = false;
+        this.emit("moved");
+      }
+    }
+
+    this.emit("meta");
     this.emit('state');
   }
 
