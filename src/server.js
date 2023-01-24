@@ -17,7 +17,7 @@ export const startServer = (config) => {
 
   /* ---------- Subscribe to robot events ---------- */
   robot.on('state', () => {
-    logger("sending state");
+    //logger("sending state");
     socket.emit('state', robot.state );
   });
 

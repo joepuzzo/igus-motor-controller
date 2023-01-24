@@ -228,7 +228,8 @@ export class Robot extends EventEmitter   {
 
     // Update our state
     this.homing = true;
-
+    this.moving = true;
+    
     this.motors.forEach( motor => {
       motor.goHome();
     });
@@ -251,6 +252,7 @@ export class Robot extends EventEmitter   {
     logger(`robotFreeze robot`);
 
     this.stopped = true;
+    this.moving = false;
 
     // Disable all motors
     this.motors.forEach(motor => {
@@ -299,7 +301,7 @@ export class Robot extends EventEmitter   {
       setTimeout(()=>{
         motor.enable();
         this.emit("meta");
-      }, 1000 * i)
+      }, 1200 * i)
     });     
 
   }

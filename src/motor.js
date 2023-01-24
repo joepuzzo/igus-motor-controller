@@ -40,7 +40,7 @@ export class Motor extends EventEmitter   {
   /** -----------------------------------------------------------
    * Constructor
    */
-  constructor({ id, canId, channel, cycleTime = 50, limNeg = -180, limPos = 180, accelEnabled = false, offset = 0, flip = false }) {
+  constructor({ id, canId, channel, cycleTime = 50, limNeg = -180, limPos = 180, accelEnabled = true, offset = 0, flip = false }) {
 
     logger(`creating motor ${id} with canId ${canId}`);
 
@@ -61,7 +61,7 @@ export class Motor extends EventEmitter   {
     this.maxVelocity = 30 * RATIO;            // degree / sec
     this.velocity = this.maxVelocity;         // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
-    this.acceleration = 40;                   // The acceleration in degree / sec
+    this.acceleration = 60;                   // The acceleration in degree / sec
     this.accelEnabled = accelEnabled;         // If acceleration/deceleration is enabled
     this.motionScale = 0.22;                  // Scales the motion velocity
     this.limPos = limPos;                     // the limit in posative direction in degrees
@@ -175,7 +175,7 @@ export class Motor extends EventEmitter   {
       const rebelError = buff[3];
       const controlError = buff[4];
       if( motorError || adcError || rebelError || controlError ){
-        logger(`Error motor ${this.id}`, buff[1], buff[2], buff[3], buff[4]);
+        //logger(`Error motor ${this.id}`, buff[1], buff[2], buff[3], buff[4]);
         this.motorError = motorError;
         this.adcError = adcError;
         this.rebelError = rebelError;
@@ -637,6 +637,7 @@ export class Motor extends EventEmitter   {
 
       this.enabled = false;
       this.stopped = true;
+      this.moving = false;
     
       // Wait 5 ms
       setTimeout(() => {
@@ -827,6 +828,7 @@ get state(){
     ready: this.ready, 
     enabled: this.enabled,
     homing: this.homing,
+    moving: this.moving,
     home: this.home,
     currentPosition: this.flip ? -this.currentPosition : this.currentPosition,
     currentTics: this.flip ? -this.currentTics : this.currentTics,
