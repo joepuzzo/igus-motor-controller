@@ -15,6 +15,12 @@
   "dependencies": {
     "nanotimer": "^0.3.15",
     "socket.io-client": "^4.5.1",
-    "socketcan": "^3.0.0"
+    "socketcan": "^3.0.0",
+    "firmata": "^2.3.0",
+    "firmata-io": "npm:@joepuzzo/firmata-io@^2.3.0",
+    "johnny-five": "^2.1.0"
+  },
+  "devDependencies": {
+    "mock-firmata": "^0.2.0"
   }
 }

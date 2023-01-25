@@ -47,8 +47,10 @@ export const startServer = (config) => {
 
   socket.on('connect', ()=>{
     logger("robot is connected to controller, sending state");
-    socket.emit('register', robot.meta);
-    socket.emit('state', robot.state );
+    if(robot.ready){
+      socket.emit('register', robot.meta);
+      socket.emit('state', robot.state );
+    }
   });
 
   socket.on('hello', msg => {
@@ -98,6 +100,11 @@ export const startServer = (config) => {
   socket.on('motorZero', (id) => {
     logger(`controller says motorZero ${id}`);
     robot.motorZero(id);
+  });
+
+ 	socket.on('gripperSetPos', (pos, speed) => {
+    logger(`controller says gripperSetPos to ${pos} at speed ${speed}`);
+    robot.gripperSetPosition(pos, speed);
   });
 
   socket.on('robotHome', () => {

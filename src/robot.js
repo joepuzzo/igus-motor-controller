@@ -3,6 +3,9 @@ import can from "socketcan";
 import {EventEmitter} from 'events';
 import { Motor } from './motor.js';
 
+import five from "johnny-five";
+import { mockBoard } from "./mockboard.js";
+
 // For reading and writing to config
 import path from 'path';
 import fs from 'fs';
@@ -22,7 +25,7 @@ export class Robot extends EventEmitter   {
   /** -----------------------------------------------------------
    * Constructor
    */
-  constructor({ id }) {
+  constructor({ id, mock }) {
 
     logger(`creating robot with id ${id}`);
 
@@ -42,8 +45,15 @@ export class Robot extends EventEmitter   {
     this.homing = false;              // if the robot is currently homing
     this.moving = false;              // if the robot is moving to a given position ( set angles was called )
 
-    // Setup robot
-    this.setup();
+    this.board = mock                 // Jhonny5 board
+      ? mockBoard()
+      : new five.Board({
+        repl: false
+    });
+
+    // Start up the robot when board is ready
+    this.board.on("ready", () => this.setup() );
+
   }
 
   /** ------------------------------
@@ -78,6 +88,12 @@ export class Robot extends EventEmitter   {
       motor.on('reset', () => this.robotState() );
       motor.on('moved', (id) => this.motorMoved(id) );
     });
+
+     // Create Gripper
+     this.gripper = new five.Servo({
+      pin: 10,
+      startAt: 20
+     });
 
     // Start robot
     this.start();
@@ -365,6 +381,19 @@ export class Robot extends EventEmitter   {
        motors
      }
   }
+
+ /* -------------------- Gripper Actions -------------------- */
+
+  gripperSetPosition(pos, speed = 500){
+    logger(`set position for gripper to ${pos}, at speed ${speed}`);
+    this.gripper.to(pos,speed);
+    setTimeout(()=>{
+        this.emit("moved");
+    }, 1000)
+  }
+
+
+ /* -------------------- Config Actions -------------------- */
 
   /** ------------------------------
    * readConfig
