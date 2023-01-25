@@ -58,7 +58,7 @@ export class Motor extends EventEmitter   {
     this.cyclesPerSec = 1000/this.cycleTime;  // how many cycles per second  
     this.gearScale = 1031.11;                 // scale for iugs Rebel joint = Gear Ratio x Encoder Ticks / 360 = Gear Scale
     this.encoderTics = 7424;					        // tics per revolution
-    this.maxVelocity = 30 * RATIO;            // degree / sec
+    this.maxVelocity = 20 * RATIO;            // degree / sec
     this.velocity = this.maxVelocity;         // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
     this.acceleration = 60;                   // The acceleration in degree / sec
@@ -69,8 +69,8 @@ export class Motor extends EventEmitter   {
     this.digitalOut = 0;                      // the wanted digital out channels
     this.digitalIn = 0;                       // the current digital int channels
     this.goalPosition = 0;                    // The joint goal position in degrees
-    this.currentPosition  = 0;                // the current joint positions in degree, loaded from the robot arm
-    this.currentTics = 0;                     // the current position in tics loaded from motor 
+    this.currentPosition  = null;             // the current joint positions in degree, loaded from the robot arm
+    this.currentTics = null;                  // the current position in tics loaded from motor 
     this.jointPositionSetPoint = 0;           // The set point is a periodicly updated goal point 
     this.timeStamp = 0;                       // For message ordering 
     this.motorCurrent = 0;                    // Motor current in mA
@@ -157,6 +157,12 @@ export class Motor extends EventEmitter   {
       this.motorCurrent = buff[6];
       this.digitalIn = buff[7]; // TODO split this down into its parts like we do with error
 
+      // If we are not enabled set our goal equal to current ( we only want to do this once so thats why we check if its eual to goal
+      if(!this.enabled && this.currentPosition != this.goalPosition ){
+        this.goalPosition = this.currentPosition;
+        logger(`Updating goal to ${this.goalPosition} as robot is stopped.`);
+      }
+
       // This is to fast so we just have interval in the robot
       //this.emit('encoder');
     }
@@ -196,14 +202,17 @@ export class Motor extends EventEmitter   {
         inDegrees = 0;
       }
 
+      // TODO currently we cant trust the pulse pos maybe add back when we can
       if( this.encoderPulsePosition == null ){
         // First time so initialize the current pos to this
         this.currentPosition = inDegrees;
 				this.currentTics = pos;
         this.goalPosition = inDegrees;
+
         // Need to initialize the direction we will move to get to start goal ( 0 )
         this.backwards = this.goalPosition < this.currentPosition;
         //this.stopped = false;
+        logger(`Motor ${this.id} start canid: ${this.canId} position ${this.currentPosition}`)
       }
       
       // Now update this value every time
@@ -261,7 +270,7 @@ export class Motor extends EventEmitter   {
    * Will write out the pos values for joint 
    */
   writeJointSetPoints(){
-
+ 
     // If we are are stopped then dont send anything
     if(this.stopped || this.robotStopped){
       return;
@@ -270,7 +279,7 @@ export class Motor extends EventEmitter   {
     // How far are we from our goal
     const distance = Math.abs(this.goalPosition - this.currentPosition);
 
-    //console.log(`DISTANCE ${distance}`);    
+    //console.log(`GOAL ${this.goalPosition} CURRENT ${this.currentPosition} DISTANCE ${distance}`);    
    
     // Slow down when we are within 5 degrees
     if( distance < 2 && !this.accelEnabled ) {
