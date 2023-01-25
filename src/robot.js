@@ -224,7 +224,12 @@ export class Robot extends EventEmitter   {
 
   motorCalibrate(id){
     logger(`calibrateMotor ${id}`);
-    this.motorMap[id].calibrate()
+    this.motorMap[id].calibrate();
+  }
+
+  motorReference(id){
+    logger(`referenceMotor ${id}`);
+    this.motorMap[id].reference();
   }
 
   queryMotorPosition(id){
@@ -286,7 +291,7 @@ export class Robot extends EventEmitter   {
 
     // Centers all motors
     this.motors.forEach(motor => {
-      motor.zero();
+      motor.center();
     });     
 
     this.emit("meta");
@@ -317,7 +322,7 @@ export class Robot extends EventEmitter   {
       setTimeout(()=>{
         motor.enable();
         this.emit("meta");
-      }, 1200 * i)
+      }, 2000 * i)
     });     
 
   }

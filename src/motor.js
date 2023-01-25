@@ -58,7 +58,7 @@ export class Motor extends EventEmitter   {
     this.cyclesPerSec = 1000/this.cycleTime;  // how many cycles per second  
     this.gearScale = 1031.11;                 // scale for iugs Rebel joint = Gear Ratio x Encoder Ticks / 360 = Gear Scale
     this.encoderTics = 7424;					        // tics per revolution
-    this.maxVelocity = 20 * RATIO;            // degree / sec
+    this.maxVelocity = 27 * RATIO;            // degree / sec
     this.velocity = this.maxVelocity;         // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
     this.acceleration = 90;                   // The acceleration in degree / sec
@@ -84,6 +84,7 @@ export class Motor extends EventEmitter   {
     this.parameters = { board: {}, motor: {}, axis: {}, control: {}, com: {} };             // A place to store any read parameters 
     this.calculatedVelocity = 0;
     this.offset = offset;
+    this.encoderOffset = 0;
     this.flip = flip;
     this.moving = false;                      // if motor is in motion
 
@@ -202,8 +203,17 @@ export class Motor extends EventEmitter   {
         inDegrees = 0;
       }
 
-      // TODO currently we cant trust the pulse pos maybe add back when we can
       if( this.encoderPulsePosition == null ){
+
+        // inDegrees is how far away from REAL zero we are
+        // Example: inDegrees = -40 
+        // We want our current position to take that into consideration
+        // therefore, we are going to add on an offset 
+        // Example 0 + -40 = -40... therefore if we set position to 10deg
+        // 10 - (-40) = 50  
+        this.encoderOffset = inDegrees;
+        logger(`Motor ${this.id} is ${inDegrees} degrees away from true zero, setting encoderOffset to ${this.encoderOffset}`);
+
         // First time so initialize the current pos to this
         this.currentPosition = inDegrees;
 				this.currentTics = pos;
@@ -406,10 +416,19 @@ export class Motor extends EventEmitter   {
 
     let position = pos;
 
+    // We want our current position to take encoder offset into consideration
+    // therefore, we are going to add on the encoder offset 
+    // Example offset = -40 therefore if we set position to 10deg
+    // 10 - (-40) = 50  
+   
+    //position = pos - this.encoderOffset;
+
     if( this.flip ) {
       position = -position;
+      //logger(`Setting position to ${pos} the actual position is going to be -${pos} - ${this.encoderOffset} + ${this.offset}`);
       position = position - this.offset;
     } else { 
+      //logger(`Setting position to ${pos} the actual position is going to be ${pos} - ${this.encoderOffset} - ${this.offset}`);
       position = position + this.offset;
     }
 
@@ -424,7 +443,7 @@ export class Motor extends EventEmitter   {
     // We are now considered to be moving so set this flag
     this.moving = true;
 
-    logger(`Motor ${this.id} Set Pos to ${pos} velocity ${velocity} acceleration ${acceleration}`);
+    logger(`Motor ${this.id} Set Pos to ${pos} actual ${position} velocity ${velocity} acceleration ${acceleration}`);
     this.velocity = velocity ?? this.velocity;
     this.acceleration = acceleration ?? this.acceleration;
     this.currentVelocity = this.accelEnabled ? 0 : this.velocity;
@@ -566,6 +585,45 @@ export class Motor extends EventEmitter   {
     }, 1)
 
   }
+
+  /** ---------------------------------
+   * Will reference the motor
+   */
+  reference() {
+    logger(`referencing motor with id ${this.id}`);
+
+    // We are starting to reference
+    this.emit('referencing');
+
+    // Create buffer for data
+    const buff = Buffer.alloc(2)
+
+    buff[0] = 0x01;
+    buff[1] = 0x0B;
+
+    // Stop sending pos updates
+    this.stopped = true;
+    
+    // Create our output frame
+    const out = {
+      id: this.canId,
+      data: buff
+    };
+
+    // Send first frame
+    this.channel.send(out);
+
+    // Wait 1 ms
+    setTimeout(() => {
+      this.channel.send(out); // Send second frame
+      // Wait 5 ms
+      setTimeout(() =>{
+        this.stopped = false; // Re enable sending pos updates
+      }, 5);
+    }, 1)
+
+  }
+
 
 
   /** ---------------------------------
