@@ -159,10 +159,10 @@ export class Motor extends EventEmitter   {
       this.digitalIn = buff[7]; // TODO split this down into its parts like we do with error
 
       // If we are not enabled set our goal equal to current ( we only want to do this once so thats why we check if its eual to goal
-      if(!this.enabled && this.currentPosition != this.goalPosition ){
-        this.goalPosition = this.currentPosition;
-        logger(`Updating goal to ${this.goalPosition} as robot is stopped.`);
-      }
+      //if(!this.enabled && this.currentPosition != this.goalPosition ){
+      //  this.goalPosition = this.currentPosition;
+      //  logger(`Updating goal to ${this.goalPosition} as robot is stopped.`);
+      //}
 
       // This is to fast so we just have interval in the robot
       //this.emit('encoder');
@@ -189,6 +189,10 @@ export class Motor extends EventEmitter   {
         this.controlError = controlError;
       }
     } 
+
+    //if(buff[0] == 0x06){
+    //  logger(`Motor ${this.id} got referencing error ${buff}`);
+    //}
 
     if(buff[0] == 0xEF){
 
@@ -421,13 +425,14 @@ export class Motor extends EventEmitter   {
     // Example offset = -40 therefore if we set position to 10deg
     // 10 - (-40) = 50  
    
-    //position = pos - this.encoderOffset;
 
     if( this.flip ) {
+      position = pos + this.encoderOffset;
       position = -position;
       //logger(`Setting position to ${pos} the actual position is going to be -${pos} - ${this.encoderOffset} + ${this.offset}`);
       position = position - this.offset;
     } else { 
+      position = pos - this.encoderOffset;
       //logger(`Setting position to ${pos} the actual position is going to be ${pos} - ${this.encoderOffset} - ${this.offset}`);
       position = position + this.offset;
     }
@@ -513,6 +518,11 @@ export class Motor extends EventEmitter   {
    */
   zero() {
     logger(`zero motor with id ${this.id}`);
+
+    // Whenever we zero we have new encoder offset to zero
+    this.goalPosition = 0;
+    this.encoderOffset = this.encoderPulsePosition;
+    logger(`Motor ${this.id} is ${this.encoderOffset} degrees away from true zero, setting encoderOffset to ${this.encoderOffset}`);
 
     // We are starting to home
     this.emit('zero');
@@ -725,6 +735,7 @@ export class Motor extends EventEmitter   {
     this.stopped = true; 
 
     // Clear error code
+    this.error = null;
     this.errorCode = 0;
     this.errorCodeString = "n/a";
 

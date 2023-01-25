@@ -151,6 +151,11 @@ export const startServer = (config) => {
     robot.robotReset();
   });
 
+  socket.on('robotReference', () => {
+    logger(`controller says robotReference`);
+    robot.robotReference();
+  });
+
   socket.on('robotUpdateConfig', (key, value) => {
     logger(`controller says robotUpdateConfig`);
     robot.updateConfig(key, value);
