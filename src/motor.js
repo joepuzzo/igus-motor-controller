@@ -947,7 +947,8 @@ get state(){
     sendTimestamp: this.sendTimestamp,
     sendInterval: this.sendInterval,
     calculatedVelocity: this.calculatedVelocity,
-    currentVelocity: this.currentVelocity / RATIO
+    currentVelocity: this.currentVelocity / RATIO,
+    encoderOffset: this.encoderOffset
   }
 }
 
