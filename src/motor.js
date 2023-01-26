@@ -660,6 +660,7 @@ export class Motor extends EventEmitter   {
     if( dec2bin(this.errorCode)[5] != '1' ){
       const errorMessage = `Error: Please reset ${this.id} before enabling`
       logger(errorMessage);
+      this.error = "NO_RESET";
       //this.emit('error', errorMessage);
     } else { 
 
@@ -742,9 +743,6 @@ export class Motor extends EventEmitter   {
 
     logger(`resetting errors for motor with id ${this.id}`);
 
-    // When we reset set the gaol to where we currently are or 0
-    //this.goalPosition = this.currentPosition || 0;
-
     // Stop sending pos updates
     this.stopped = true; 
 
@@ -753,7 +751,8 @@ export class Motor extends EventEmitter   {
     this.errorCode = 0;
     this.errorCodeString = "n/a";
 
-    // First we set our set point to where we are ( in degrees )
+    // First we set our set point to where we are ( in degrees ) because we want NO movement after enable
+    this.goalPosition = this.currentPosition;
     this.jointPositionSetPoint = this.currentPosition;
    
     // Protocol: 0x01 0x06 
