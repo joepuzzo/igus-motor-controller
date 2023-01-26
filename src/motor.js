@@ -87,6 +87,7 @@ export class Motor extends EventEmitter   {
     this.encoderOffset = 0;
     this.flip = flip;
     this.moving = false;                      // if motor is in motion
+    this.zeroed = false;                      // if this motor has been zeroed out yet
 
     // Our can channel
     this.channel = channel;
@@ -182,7 +183,7 @@ export class Motor extends EventEmitter   {
       const rebelError = buff[3];
       const controlError = buff[4];
       if( motorError || adcError || rebelError || controlError ){
-        logger(`Error motor ${this.id}`, buff[1], buff[2], buff[3], buff[4]);
+        //logger(`Error motor ${this.id}`, buff[1], buff[2], buff[3], buff[4]);
         this.motorError = motorError;
         this.adcError = adcError;
         this.rebelError = rebelError;
@@ -203,6 +204,7 @@ export class Motor extends EventEmitter   {
 
       // Bug at 180deg initialization
       if(Math.abs(inDegrees) === 180){
+        console.log(`${this.id} WTF FLIP FLIP-------------`);
         pos = 0;
         inDegrees = 0;
       }
@@ -232,6 +234,7 @@ export class Motor extends EventEmitter   {
       // Now update this value every time
       this.encoderPulsePosition = inDegrees;
       this.encoderPulseTics = pos;
+      //console.log(`${this.id} PULSE`, inDegrees);
     }
 
   }
@@ -423,8 +426,7 @@ export class Motor extends EventEmitter   {
     // We want our current position to take encoder offset into consideration
     // therefore, we are going to add on the encoder offset 
     // Example offset = -40 therefore if we set position to 10deg
-    // 10 - (-40) = 50  
-   
+    // 10 - (-40) = 50   
 
     if( this.flip ) {
       position = pos + this.encoderOffset;
@@ -521,6 +523,7 @@ export class Motor extends EventEmitter   {
 
     // Whenever we zero we have new encoder offset to zero
     this.goalPosition = 0;
+    this.jointPositionSetPoint = 0
     this.encoderOffset = this.encoderPulsePosition;
     logger(`Motor ${this.id} is ${this.encoderOffset} degrees away from true zero, setting encoderOffset to ${this.encoderOffset}`);
 
@@ -537,7 +540,7 @@ export class Motor extends EventEmitter   {
 
     // Stop sending pos updates
     this.stopped = true;
-    
+
     // Create our output frame
     const out = {
       id: this.canId,
@@ -553,8 +556,10 @@ export class Motor extends EventEmitter   {
       // Wait 5 ms
       setTimeout(() =>{
         this.stopped = false; // Re enable sending pos updates
+        this.zeroed = true;   // We have been zeroed!
       }, 5);
     }, 1)
+
 
   }
 
@@ -646,6 +651,12 @@ export class Motor extends EventEmitter   {
 
     logger(`enabling motor with id ${this.id} error code is currently ${dec2bin(this.errorCode)}`);
 
+    if( this.zeroed === false ){
+      logger(`Error: Please zero out ${this.id} before enabling.`);
+      this.error = "NO_ZERO";
+      return;
+    }
+
     if( dec2bin(this.errorCode)[5] != '1' ){
       const errorMessage = `Error: Please reset ${this.id} before enabling`
       logger(errorMessage);
@@ -730,6 +741,9 @@ export class Motor extends EventEmitter   {
   reset() {
 
     logger(`resetting errors for motor with id ${this.id}`);
+
+    // When we reset set the gaol to where we currently are or 0
+    //this.goalPosition = this.currentPosition || 0;
 
     // Stop sending pos updates
     this.stopped = true; 
@@ -908,6 +922,7 @@ get state(){
     homing: this.homing,
     moving: this.moving,
     home: this.home,
+    zeroed: this.zeroed,
     currentPosition: this.flip ? -this.currentPosition : this.currentPosition,
     currentTics: this.flip ? -this.currentTics : this.currentTics,
     encoderPulsePosition: this.flip ? -this.encoderPulsePosition : this.encoderPulsePosition,

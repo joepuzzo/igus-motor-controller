@@ -259,7 +259,7 @@ export class Robot extends EventEmitter   {
   robotStop(){
     logger(`stop robot`);
 
-    this.stopped = true;
+    //this.stopped = true;
 
     // Disable all motors
     this.motors.forEach(motor => {
@@ -331,7 +331,7 @@ export class Robot extends EventEmitter   {
     this.stopped = false;
 
     // Enable all motors
-    this.motors.forEach((motor, i) => {
+    this.motors.slice().reverse().forEach((motor, i) => {
       setTimeout(()=>{
         motor.enable();
         this.emit("meta");
