@@ -182,7 +182,7 @@ export class Motor extends EventEmitter   {
       const rebelError = buff[3];
       const controlError = buff[4];
       if( motorError || adcError || rebelError || controlError ){
-        //logger(`Error motor ${this.id}`, buff[1], buff[2], buff[3], buff[4]);
+        logger(`Error motor ${this.id}`, buff[1], buff[2], buff[3], buff[4]);
         this.motorError = motorError;
         this.adcError = adcError;
         this.rebelError = rebelError;

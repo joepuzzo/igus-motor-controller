@@ -305,7 +305,7 @@ export class Robot extends EventEmitter   {
       setTimeout(()=>{
         motor.zero();
         this.emit("meta");
-      }, 100 * i)
+      }, 1000 * i)
     });     
 
   }
@@ -320,7 +320,7 @@ export class Robot extends EventEmitter   {
       setTimeout(()=>{
         motor.reset();
         this.emit("meta");
-      }, 700 * i)
+      }, 1000 * i)
     });     
 
   }
@@ -335,7 +335,7 @@ export class Robot extends EventEmitter   {
       setTimeout(()=>{
         motor.enable();
         this.emit("meta");
-      }, 2000 * i)
+      }, 3000 * i)
     });     
 
   }
