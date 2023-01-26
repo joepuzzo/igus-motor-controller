@@ -948,7 +948,7 @@ get state(){
     sendInterval: this.sendInterval,
     calculatedVelocity: this.calculatedVelocity,
     currentVelocity: this.currentVelocity / RATIO,
-    encoderOffset: this.encoderOffset
+    encoderOffset: this.flip ? -this.encoderOffset : this.encoderOffset
   }
 }
 
