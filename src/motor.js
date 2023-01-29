@@ -204,7 +204,8 @@ export class Motor extends EventEmitter   {
 
       // Bug at 180deg initialization
       if(Math.abs(inDegrees) === 180){
-        console.log(`${this.id} WTF FLIP FLIP-------------`);
+        // TODO we should remove this when we figure out whats going on ( maybe its not needed anymore )
+        logger(`Motor ${this.id} reporting position ${pos} but in fact its at 180`)
         pos = 0;
         inDegrees = 0;
       }
@@ -235,6 +236,7 @@ export class Motor extends EventEmitter   {
       this.encoderPulsePosition = inDegrees;
       this.encoderPulseTics = pos;
       //console.log(`${this.id} PULSE`, inDegrees);
+      // this.emit('pulse');
     }
 
   }
