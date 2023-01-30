@@ -317,6 +317,19 @@ export class Robot extends EventEmitter   {
 
   }
 
+  robotZero(){
+    logger(`zero robot`);
+
+    // Zero out all motors
+    this.motors.forEach((motor, i) => {
+      setTimeout(()=>{
+        motor.zero();
+        this.emit("meta");
+      }, 1000 * i)
+    });     
+
+  }
+
   robotReset(){
     logger(`reset robot`);
 
