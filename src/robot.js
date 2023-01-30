@@ -87,6 +87,7 @@ export class Robot extends EventEmitter   {
       motor.on('enabled', () => this.robotState() );
       motor.on('reset', () => this.robotState() );
       motor.on('moved', (id) => this.motorMoved(id) );
+      motor.on('pulse', (id, pos) => this.motorPulse(id, pos))
     });
 
      // Create Gripper
@@ -172,6 +173,12 @@ export class Robot extends EventEmitter   {
 
     this.emit('meta');
     this.emit('state');
+  }
+
+  motorPulse(id, pos){
+    if(id == 'j4'){
+      logger(`Motor ${id} pulse ${pos}`);
+    }
   }
 
   /** ---------------------------------

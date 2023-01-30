@@ -188,6 +188,12 @@ export class Motor extends EventEmitter   {
         this.adcError = adcError;
         this.rebelError = rebelError;
         this.controlError = controlError;
+      } else {
+        // We have no error so clear it
+        this.motorError = undefined;
+        this.adcError = undefined;
+        this.rebelError = undefined;
+        this.controlError = undefined;
       }
     } 
 
@@ -236,7 +242,7 @@ export class Motor extends EventEmitter   {
       this.encoderPulsePosition = inDegrees;
       this.encoderPulseTics = pos;
       //console.log(`${this.id} PULSE`, inDegrees);
-      // this.emit('pulse');
+      this.emit('pulse', this.id, inDegrees);
     }
 
   }
