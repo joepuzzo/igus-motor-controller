@@ -88,6 +88,7 @@ export class Motor extends EventEmitter   {
     this.flip = flip;
     this.moving = false;                      // if motor is in motion
     this.zeroed = false;                      // if this motor has been zeroed out yet
+    this.referenced = false;                  // if this motor has been referenced
 
     // Our can channel
     this.channel = channel;
@@ -615,6 +616,12 @@ export class Motor extends EventEmitter   {
   reference() {
     logger(`referencing motor with id ${this.id}`);
 
+    // Whenever we reference we have new encoder offset, zero, as current will now equal actual
+    this.goalPosition = this.encoderPulsePosition;
+    this.jointPositionSetPoint = this.encoderPulsePosition
+    this.encoderOffset = 0;
+    logger(`Motor ${this.id} is ${this.encoderOffset} degrees away from true zero, setting encoderOffset to ${this.encoderOffset}`);
+
     // We are starting to reference
     this.emit('referencing');
 
@@ -641,6 +648,7 @@ export class Motor extends EventEmitter   {
       this.channel.send(out); // Send second frame
       // Wait 5 ms
       setTimeout(() =>{
+        this.referenced = true; // this motor has been referenced
         this.stopped = false; // Re enable sending pos updates
       }, 5);
     }, 1)
@@ -659,7 +667,9 @@ export class Motor extends EventEmitter   {
 
     logger(`enabling motor with id ${this.id} error code is currently ${dec2bin(this.errorCode)}`);
 
+    //if( this.zeroed === false && this.referenced === false ){
     if( this.zeroed === false ){
+      //logger(`Error: Please zero out OR Reference ${this.id} before enabling. Reference ${this.referenced} Zeroed: ${this.zeroed}`);
       logger(`Error: Please zero out ${this.id} before enabling.`);
       this.error = "NO_ZERO";
       return;
@@ -930,6 +940,7 @@ get state(){
     moving: this.moving,
     home: this.home,
     zeroed: this.zeroed,
+    referenced: this.referenced,
     currentPosition: this.flip ? -this.currentPosition : this.currentPosition,
     currentTics: this.flip ? -this.currentTics : this.currentTics,
     encoderPulsePosition: this.flip ? -this.encoderPulsePosition : this.encoderPulsePosition,
