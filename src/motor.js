@@ -243,7 +243,8 @@ export class Motor extends EventEmitter   {
       this.encoderPulsePosition = inDegrees;
       this.encoderPulseTics = pos;
       //console.log(`${this.id} PULSE`, inDegrees);
-      this.emit('pulse', this.id, inDegrees);
+      // TODO maybe add back some day
+      //this.emit('pulse', this.id, inDegrees);
     }
 
   }

@@ -176,9 +176,7 @@ export class Robot extends EventEmitter   {
   }
 
   motorPulse(id, pos){
-    if(id == 'j4'){
-      logger(`Motor ${id} pulse ${pos}`);
-    }
+    this.emit('pulse', id, pos);
   }
 
   /** ---------------------------------

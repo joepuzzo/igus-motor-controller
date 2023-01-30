@@ -42,6 +42,9 @@ export const startServer = (config) => {
     socket.emit("moved", robot.meta);
   });
 
+  robot.on('pulse', (id, pos) => {
+    socket.emit("pulse", id);
+  });
 
   /* ---------- Subscribe to socket events ---------- */
 
