@@ -33,7 +33,7 @@ export class Robot extends EventEmitter   {
     super();
 
     // Create channel
-    this.channel = can.createRawChannel('can1', true);
+    this.channel = can.createRawChannel('can2', true);
 
     // Define parameters
     this.id = id;

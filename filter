@@ -1,2 +1,4 @@
 ((!(data.data == ef:00:00:7e:00:00:00:0c)) && !(data.data == e0:00:00:00:00:00:00:00)) && !(can.id == 0x013)
 data.data contains 01:02:03:04
+can.id == 0x51 || data.data == 01:0b
+can.id == 0x50 && data.data == 01:08:00:00
