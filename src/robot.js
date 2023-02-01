@@ -296,7 +296,7 @@ export class Robot extends EventEmitter   {
 
     // Centers all motors
     this.motors.forEach(motor => {
-      motor.center();
+      motor.goHome();
     });     
 
     this.emit("meta");
