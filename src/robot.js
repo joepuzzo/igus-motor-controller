@@ -297,9 +297,10 @@ export class Robot extends EventEmitter   {
     this.moving = true;
 
     // Centers all motors
-    this.motors.forEach(motor => {
-      motor.goHome();
-    });     
+    //this.motors.forEach(motor => {
+    //  motor.goHome();
+    //});
+    this.robotSetAngles([0,0,0,0,0,0]);
 
     this.emit("meta");
   }
@@ -478,7 +479,7 @@ export class Robot extends EventEmitter   {
         // How fast will it need to go to cover this distance?
         const ratio = longestRatio;
         const distanceAtSpeed = D * ratio;
-        logger(`Ratio, ${ratio}, distanceAtSpeed: ${distanceAtSpeed}`);
+        //logger(`Ratio, ${ratio}, distanceAtSpeed: ${distanceAtSpeed}`);
         let travelSpeed = distanceAtSpeed / longestMotorTimeAtSpeed;
 
         // This leaves (longestTime - longestMotorTimeAtSpeed) many seconds for accel and decel
@@ -491,7 +492,7 @@ export class Robot extends EventEmitter   {
         
         if( travelSpeed <= motor.maxVelocity + 1 && acceleration <= motor.maxAccel + 1 ){
           // Now go! ( make sure we pass degrees and not steps to this func )
-          logger(`About to set motor ${motor.id} to ${angles[i]} at a speed of ${travelSpeed} and acceleration of ${acceleration}`);
+          // logger(`About to set motor ${motor.id} to ${angles[i]} at a speed of ${travelSpeed} and acceleration of ${acceleration}`);
           motor.setPosition(angles[i], travelSpeed, acceleration);
         } else {
           logger(`ERROR!! unable to set pos for motor ${motor.id} with acceleration ${acceleration} and speed ${travelSpeed} as one of them is too big!`)
