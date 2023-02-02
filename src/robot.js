@@ -364,10 +364,13 @@ export class Robot extends EventEmitter   {
     // We are moving whole robot
     this.moving = true;
 
+    // If we want all movements to end at the same time
+    this.moveMotorsAtSameTime(angles, speed);
+
     // Set each motor angle
-    this.motors.forEach( (motor, i) => {
-      motor.setPosition(angles[i], speed);
-    });
+    // this.motors.forEach( (motor, i) => {
+    //   motor.setPosition(angles[i], speed);
+    // });
   }
 
   robotAccelEnabled(value){
@@ -376,6 +379,104 @@ export class Robot extends EventEmitter   {
     this.motors.forEach( (motor, i) => {
     	this.updateConfig(`${motor.id}.accelEnabled`, value)
     });
+  }
+
+  moveMotorsAtSameTime(angles, speed){
+
+      // Step1: First find the motor that will take the longest time
+      let longestTime = 0;
+      let longestMotor = this.motors[0];
+      let longestMotorTimeAtSpeed = 1;
+      let longestRatio = 0;
+
+      this.motors.forEach((motor, i)=>{
+
+        // We want to determine the speed ( dont allow user to go over motor max speed )
+        const maxSpeed = speed && ( speed <= motor.maxVelocity ) ? speed : motor.maxVelocity;
+       
+        // Below we have distances A, B, and C
+        // where A = C and are the ramp up and down times and B is the max speed time
+        //
+        // Total Distance = D
+        //
+        //  A         B         C
+        //
+        //      |          | 
+        //      ____________
+        //     /|          |\
+        // ___/ |          | \___
+        //
+        //  T1       T2        T1
+        //
+        // Our goal is to calculate T1 and T2
+
+        // First calculate the distance
+        // Example1: D = 90 - 0 = 90
+        // Example2: D = 20 - 10 = 10
+        const D = Math.abs(motor.goalPosition - motor.currentPosition)
+
+        // T1 is the time to get up to maxSpeed given at an acceleration.
+        // Example: T1 = 65°s / 40°s = 1.625°s
+        const T1 = maxSpeed / motor.acceleration;
+
+        // Using displacement equation s=1/2 at^2 to get the distance traveled during T1
+        // Example: A = .5 * 40°s * ( 1.625°s ** 2 ) = 52.8125
+        const A = .5 * this.acceleration * (T1 ** 2) * this.motionScale;
+
+        // B =  total distance - distance traveled to acclerate/decellerate
+        // Example1: B = 90 - ( 2 * 52.8125 ) = -15.625 
+        // Example2: B = 10 - ( 2 * 52.8125 ) = -95.625
+        const B = D - (2 * A);
+
+        // Time to travel distance B (while at max speed) is B/maxSpeed
+        const T2 = B/maxSpeed;
+
+        // Set total time
+        const thisTime = T1 + T2 + T1;
+
+        // Add to results
+        results.push({ A, B, D, T1, T2 })
+
+        // Update longest if its longer
+        if(thisTime > longestTime){
+          longestTime = thisTime;
+          longestMotor = motor;
+          longestMotorTimeAtSpeed =  T2;
+          longestRatio = B / D;
+        }
+
+      });
+
+      logger(`Longest time is ${longestTime} for motor ${longestMotor.id}`);
+      logger(`Results`, results);
+
+      // Step2: Move via speed for each based on time
+      this.motors.forEach((motor, i) => {
+
+        // Scale down the speed based on longest time
+        const { D } = results[i];
+
+        // We want this motor to spend longestMotorTimeAtSpeed at speed
+        // It will travel D * longestMotorTimeAtSpeed/longestTime total distance at speed
+        // How fast will it need to go to cover this distance?
+        const ratio = longestRatio;
+        const distaceAtSpeed = D * ratio;
+        const travelSpeed = distaceAtSpeed / longestMotorTimeAtSpeed;
+
+        // This leaves (longestTime - longestMotorTimeAtSpeed) many seconds for accel and decel
+        // What acceleration is required to reach travelSpeed in (longestTime - longestMotorTimeAtSpeed)/2 seconds?
+        const timeForAcceleration = (longestTime - longestMotorTimeAtSpeed) /2;
+        const acceleration = travelSpeed / timeForAcceleration;
+        
+        if( travelSpeed < motor.maxVelocity && acceleration < motor.acceleration ){
+          // Now go! ( make sure we pass degrees and not steps to this func )
+          logger(`About to set motor ${motor.id} to ${angles[i]} at a speed of ${travelSpeed} and acceleration of ${acceleration}`);
+          //motor.setPosition(angles[i], travelSpeed, acceleration);
+        } else {
+          logger(`ERROR!! unable to set pos for motor ${motor.id} with acceleration ${acceleration} and speed ${travelSpeed} as one of them is too big!`)
+        }
+      })
+
   }
 
   /** ---------------------------------
