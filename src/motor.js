@@ -68,10 +68,10 @@ export class Motor extends EventEmitter   {
     this.limNeg = limNeg;                     // the limit in negative direction in degrees
     this.digitalOut = 0;                      // the wanted digital out channels
     this.digitalIn = 0;                       // the current digital int channels
-    this.goalPosition = 0;                    // The joint goal position in degrees
+    this.goalPosition = null;                 // The joint goal position in degrees
     this.currentPosition  = null;             // the current joint positions in degree, loaded from the robot arm
     this.currentTics = null;                  // the current position in tics loaded from motor 
-    this.jointPositionSetPoint = 0;           // The set point is a periodicly updated goal point 
+    this.jointPositionSetPoint = null;        // The set point is a periodicly updated goal point 
     this.timeStamp = 0;                       // For message ordering 
     this.motorCurrent = 0;                    // Motor current in mA
     this.errorCode = 0;                       // the error state of the joint module
@@ -88,7 +88,8 @@ export class Motor extends EventEmitter   {
     this.flip = flip;
     this.moving = false;                      // if motor is in motion
     this.zeroed = false;                      // if this motor has been zeroed out yet
-    this.referenced = false;                  // if this motor has been referenced
+    this.referenced = 0;                      // if this motor has been referenced
+    this.aligned = 0;                         // if the motor has been aligned
 
     // Our can channel
     this.channel = channel;
@@ -158,13 +159,14 @@ export class Motor extends EventEmitter   {
       //this.currentPosition = ( 360 / this.encoderTics ) * pos;
       this.currentTics = pos;
       this.motorCurrent = buff[6];
-      this.digitalIn = buff[7]; // TODO split this down into its parts like we do with error
+      this.decodeFlags(buff[7]);
 
-      // If we are not enabled set our goal equal to current ( we only want to do this once so thats why we check if its eual to goal
-      //if(!this.enabled && this.currentPosition != this.goalPosition ){
-      //  this.goalPosition = this.currentPosition;
-      //  logger(`Updating goal to ${this.goalPosition} as robot is stopped.`);
-      //}
+      // If we dont have goal or setPoint set to currentPosition
+      if( this.goalPosition == null ){
+        logger(`Motor ${this.id} is updating its goal to ${this.currentPosition}`);
+        this.goalPosition = this.currentPosition;
+        this.jointPositionSetPoint = this.currentPosition;
+      }
 
       // This is to fast so we just have interval in the robot
       //this.emit('encoder');
@@ -292,6 +294,21 @@ export class Motor extends EventEmitter   {
     // LAG,COM,ESTOP
     return result;
   }
+
+  /** ---------------------------------
+   * decodes flags
+   */
+  decodeFlags(flags){
+    // Example: 
+    // error = 0x42 
+    // decoded = '01000010'
+    const decoded = dec2bin(flags);
+
+    // [ REF ] [  ALIGN ]  [     UNUSED    ] [         DIN         ]   
+    this.referenced = +decoded[0];
+    this.aligned = +decoded[1];
+  }
+
 
   /** ---------------------------------
    * Will write out the pos values for joint 
@@ -429,23 +446,18 @@ export class Motor extends EventEmitter   {
    */
   setPosition( pos, velocity = this.maxVelocity, acceleration ) {
 
-    //this.resetEnable();
+    if( !this.referenced ){
+      logger(`Error: This motor is not referenced and cant move. Please reference before moving..`);
+      this.error = "NOT_REFERENCED/CANT_MOVE";
+      return;
+    }
 
     let position = pos;
 
-    // We want our current position to take encoder offset into consideration
-    // therefore, we are going to add on the encoder offset 
-    // Example offset = -40 therefore if we set position to 10deg
-    // 10 - (-40) = 50   
-
     if( this.flip ) {
-      position = pos + this.encoderOffset;
       position = -position;
-      //logger(`Setting position to ${pos} the actual position is going to be -${pos} - ${this.encoderOffset} + ${this.offset}`);
       position = position - this.offset;
     } else { 
-      position = pos - this.encoderOffset;
-      //logger(`Setting position to ${pos} the actual position is going to be ${pos} - ${this.encoderOffset} - ${this.offset}`);
       position = position + this.offset;
     }
 
@@ -531,9 +543,12 @@ export class Motor extends EventEmitter   {
   zero() {
     logger(`zero motor with id ${this.id}`);
 
-    // Whenever we zero we have new encoder offset to zero
-    this.goalPosition = 0;
-    this.jointPositionSetPoint = 0
+    // Stop sending pos updates
+    this.stopped = true;
+
+    // Whenever we zero we have new encoder offset
+    this.goalPosition = null;
+    this.jointPositionSetPoint = null;
     this.encoderOffset = this.encoderPulsePosition;
     logger(`Motor ${this.id} is ${this.encoderOffset} degrees away from true zero, setting encoderOffset to ${this.encoderOffset}`);
 
@@ -547,9 +562,6 @@ export class Motor extends EventEmitter   {
     buff[1] = 0x08;
     buff[2] = 0x00;
     buff[3] = 0x00;
-
-    // Stop sending pos updates
-    this.stopped = true;
 
     // Create our output frame
     const out = {
@@ -617,9 +629,12 @@ export class Motor extends EventEmitter   {
   reference() {
     logger(`referencing motor with id ${this.id}`);
 
+    // Stop sending pos updates
+    this.stopped = true;
+
     // Whenever we reference we have new encoder offset, zero, as current will now equal actual
-    this.goalPosition = this.encoderPulsePosition;
-    this.jointPositionSetPoint = this.encoderPulsePosition
+    this.goalPosition = null;
+    this.jointPositionSetPoint = null;
     this.encoderOffset = 0;
     logger(`Motor ${this.id} is ${this.encoderOffset} degrees away from true zero, setting encoderOffset to ${this.encoderOffset}`);
 
@@ -632,9 +647,6 @@ export class Motor extends EventEmitter   {
     buff[0] = 0x01;
     buff[1] = 0x0B;
 
-    // Stop sending pos updates
-    this.stopped = true;
-    
     // Create our output frame
     const out = {
       id: this.canId,
@@ -649,7 +661,6 @@ export class Motor extends EventEmitter   {
       this.channel.send(out); // Send second frame
       // Wait 5 ms
       setTimeout(() =>{
-        this.referenced = true; // this motor has been referenced
         this.stopped = false; // Re enable sending pos updates
       }, 5);
     }, 1)
@@ -668,12 +679,10 @@ export class Motor extends EventEmitter   {
 
     logger(`enabling motor with id ${this.id} error code is currently ${dec2bin(this.errorCode)}`);
 
-    //if( this.zeroed === false && this.referenced === false ){
-    if( this.zeroed === false ){
-      //logger(`Error: Please zero out OR Reference ${this.id} before enabling. Reference ${this.referenced} Zeroed: ${this.zeroed}`);
-      logger(`Error: Please zero out ${this.id} before enabling.`);
-      this.error = "NO_ZERO";
-      return;
+    if( !this.referenced ){
+      logger(`Error: This motor is not referenced.`);
+      this.error = "NOT_REFERENCED";
+      //return;
     }
 
     if( dec2bin(this.errorCode)[5] != '1' ){
@@ -770,9 +779,9 @@ export class Motor extends EventEmitter   {
     this.errorCode = 0;
     this.errorCodeString = "n/a";
 
-    // First we set our set point to where we are ( in degrees ) because we want NO movement after enable
-    this.goalPosition = this.currentPosition;
-    this.jointPositionSetPoint = this.currentPosition;
+    // Clear out goal and pos set as these will get set on our next response from the motor
+    this.goalPosition = null;
+    this.jointPositionSetPoint = null;
    
     // Protocol: 0x01 0x06 
 
@@ -942,6 +951,7 @@ get state(){
     home: this.home,
     zeroed: this.zeroed,
     referenced: this.referenced,
+    aligned: this.aligned,
     currentPosition: this.flip ? -this.currentPosition : this.currentPosition,
     currentTics: this.flip ? -this.currentTics : this.currentTics,
     encoderPulsePosition: this.flip ? -this.encoderPulsePosition : this.encoderPulsePosition,
