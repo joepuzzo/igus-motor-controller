@@ -1,4 +1,5 @@
 import {EventEmitter} from 'events';
+import { getMotion } from './utils.js';
 
 // For debugging
 import { Debug } from './debug.js';
@@ -474,59 +475,25 @@ export class Motor extends EventEmitter   {
     this.moving = true;
 
     logger(`Motor ${this.id} Set Pos to ${pos} actual ${position} velocity ${velocity} acceleration ${acceleration}`);
+
+    // Until we figure out the ratio issue we need to do this
     this.velocity = velocity ? velocity * RATIO : this.velocity;
     this.acceleration = acceleration ? acceleration * RATIO : this.acceleration;
+
+    // Update the values before movment
     this.currentVelocity = this.accelEnabled ? 0 : this.velocity;
     this.goalPosition = position;
     this.backwards = this.goalPosition < this.currentPosition;
     this.deccelAt = null;
 
-    // Based on set acceleration there is a point where we need to start to deccel calculate that point
-    // 
-    // Below we have distances A, B, and C
-    // where A = C and are the ramp up and down times and B is the max speed time
-    //
-    // Total Distance = D
-    //
-    //  A         B         C
-    //
-    //      |          | 
-    //      ____________
-    //     /|          |\
-    // ___/ |          | \___
-    //
-    //  T1       T2        T1
-    //
-    // Our goal is to calculate A + B to determine when to start C
-
-    // First calculate the distance
-    // Example1: D = 90 - 0 = 90
-    // Example2: D = 20 - 10 = 10
-    const D = Math.abs(this.goalPosition - this.currentPosition)
-
-    // T1 is the time to get up to maxSpeed given at an acceleration.
-    // Example: T1 = 65°s / 40°s = 1.625°s
-    const T1 = this.velocity / this.acceleration;
-
-    // Using displacement equation s=1/2 at^2 to get the distance traveled during T1
-    // Example: A = .5 * 40°s * ( 1.625°s ** 2 ) = 52.8125
-    const A = .5 * this.acceleration * (T1 ** 2) * this.motionScale;
-
-    // B =  total distance - distance traveled to acclerate/decellerate
-    // Example1: B = 90 - ( 2 * 52.8125 ) = -15.625 
-    // Example2: B = 10 - ( 2 * 52.8125 ) = -95.625
-    const B = D - (2 * A);
-
-    // Now we know when to start deceleration
-    // Note if B is negative then we simply split the distance in two half for deccel and half for accel
-    const deccelAt = B < 0 ? D / 2 : A + B;
-
-    console.log('DECELAT: ', deccelAt);
-
+    // Get the motion information ( need to determine where to start decellerating )
+    const { DECCEL, MESSAGE } = getMotion(this, pos, velocity, acceleration );
+   
     // The deccelAt position is an offset from current pos
-    this.deccelAt = this.backwards ? this.currentPosition - deccelAt : this.currentPosition + deccelAt; 
+    this.deccelAt = this.backwards ? this.currentPosition - DECCEL : this.currentPosition + DECCEL; 
 
-    logger(`Determined we are going to start deccel at ${this.deccelAt}, A: ${A}, B: ${B}, D: ${D}, T1: ${T1}`);
+    logger(MESSAGE);
+    logger(`Determined we are going to start deccel at ${this.deccelAt}`);
 
     logger(`Goal: ${this.goalPosition}, Current ${this.currentPosition}, Backwards: ${this.backwards}`);
   }
