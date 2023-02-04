@@ -58,11 +58,11 @@ export class Motor extends EventEmitter   {
     this.cyclesPerSec = 1000/this.cycleTime;  // how many cycles per second  
     this.gearScale = 1031.11;                 // scale for iugs Rebel joint = Gear Ratio x Encoder Ticks / 360 = Gear Scale
     this.encoderTics = 7424;					        // tics per revolution
-    this.maxVelocity = 27 * RATIO;            // degree / sec
-    this.maxAccel    = 90;                    // max accel in deg/s
-    this.velocity = this.maxVelocity;         // Initial velocity is max
+    this.maxVelocity = 27;                    // degree / sec
+    this.maxAccel    = 30;                    // max accel in deg/s
+    this.velocity = this.maxVelocity * RATIO; // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
-    this.acceleration = this.maxAccel;             // The acceleration in degree / sec
+    this.acceleration = this.maxAccel * RATIO;// The acceleration in degree / sec
     this.accelEnabled = accelEnabled;         // If acceleration/deceleration is enabled
     this.motionScale = 0.22;                  // Scales the motion velocity
     this.limPos = limPos;                     // the limit in posative direction in degrees
@@ -474,8 +474,8 @@ export class Motor extends EventEmitter   {
     this.moving = true;
 
     logger(`Motor ${this.id} Set Pos to ${pos} actual ${position} velocity ${velocity} acceleration ${acceleration}`);
-    this.velocity = velocity ?? this.velocity;
-    this.acceleration = acceleration ?? this.acceleration;
+    this.velocity = velocity ? velocity * RATIO : this.velocity;
+    this.acceleration = acceleration ? acceleration * RATIO : this.acceleration;
     this.currentVelocity = this.accelEnabled ? 0 : this.velocity;
     this.goalPosition = position;
     this.backwards = this.goalPosition < this.currentPosition;
@@ -520,6 +520,8 @@ export class Motor extends EventEmitter   {
     // Now we know when to start deceleration
     // Note if B is negative then we simply split the distance in two half for deccel and half for accel
     const deccelAt = B < 0 ? D / 2 : A + B;
+
+    console.log('DECELAT: ', deccelAt);
 
     // The deccelAt position is an offset from current pos
     this.deccelAt = this.backwards ? this.currentPosition - deccelAt : this.currentPosition + deccelAt; 

@@ -1,105 +1,11 @@
-// igus:robot	 igus:robot	 Longest time is 3.349211289119019 for motor j2
-// igus:robot	 igus:robot	 Results [
-// {
-//   accelDistance: 0.049749822222222226,
-//   cruiseDistance: 62.70040400696298,
-//   distance: 62.79990365140742,
-//   accelTime: 0.07088888888888889,
-//   cruiseTime: 2.162082896791827,
-//   A: 0.049749822222222226,
-//   B: 62.70040400696298,
-//   D: 62.79990365140742,
-//   T1: 0.07088888888888889,
-//   T2: 2.162082896791827
-// },
-// {
-//   accelDistance: 0.049749822222222226,
-//   cruiseDistance: 60.85639183800191,
-//   distance: 60.955891482446354,
-//   accelTime: 0.07088888888888889,
-//   cruiseTime: 2.0984962702759278,
-//   A: 0.049749822222222226,
-//   B: 60.85639183800191,
-//   D: 60.955891482446354,
-//   T1: 0.07088888888888889,
-//   T2: 2.0984962702759278
-// },
-// {
-//   accelDistance: 0.049749822222222226,
-//   cruiseDistance: 93.015571828896,
-//   distance: 93.11507147334045,
-//   accelTime: 0.07088888888888889,
-//   cruiseTime: 3.2074335113412413,
-//   A: 0.049749822222222226,
-//   B: 93.015571828896,
-//   D: 93.11507147334045,
-//   T1: 0.07088888888888889,
-//   T2: 3.2074335113412413
-// },
-// {
-//   accelDistance: 0.049749822222222226,
-//   cruiseDistance: 65.09714898931716,
-//   distance: 65.19664863376161,
-//   accelTime: 0.07088888888888889,
-//   cruiseTime: 2.2447292754936954,
-//   A: 0.049749822222222226,
-//   B: 65.09714898931716,
-//   D: 65.19664863376161,
-//   T1: 0.07088888888888889,
-//   T2: 2.2447292754936954
-// },
-// {
-//   accelDistance: 0.049749822222222226,
-//   cruiseDistance: 78.37896908209261,
-//   distance: 78.47846872653706,
-//   accelTime: 0.07088888888888889,
-//   cruiseTime: 2.7027230717962967,
-//   A: 0.049749822222222226,
-//   B: 78.37896908209261,
-//   D: 78.47846872653706,
-//   T1: 0.07088888888888889,
-//   T2: 2.7027230717962967
-// },
-// {
-//   accelDistance: 0.049749822222222226,
-//   cruiseDistance: 23.30124052789476,
-//   distance: 23.400740172339205,
-//   accelTime: 0.07088888888888889,
-//   cruiseTime: 0.8034910526860262,
-//   A: 0.049749822222222226,
-//   B: 23.30124052789476,
-//   D: 23.400740172339205,
-//   T1: 0.07088888888888889,
-//   T2: 0.8034910526860262
-// }
-// ]
-// igus:motor	 igus:motor	 Motor j0 Set Pos to -62.82705885308328 actual 62.82705885308328 velocity 83 acceleration 60.69899576079781
-// igus:motor	 igus:motor	 Determined we are going to start deccel at 50.34266779352945, A: 12.48439105955383, B: 37.83112153229976, D: 62.79990365140742, T1: 1.3674031828646036
-// igus:motor	 igus:motor	 Goal: 62.82705885308328, Current 0.02715520167586388, Backwards: false
+// For debugging
+import { Debug } from './debug.js';
+const logger = Debug('igus:robot' + '\t');
 
-// igus:motor	 igus:motor	 Motor j1 Set Pos to -60.9629712314547 actual 30.962971231454702 velocity 81 acceleration 58.91667317240768
-// igus:motor	 igus:motor	 Determined we are going to start deccel at 18.713297902343562, A: 12.249673329111136, B: 36.45654482422408, D: 60.955891482446354, T1: 1.374823044793618
-// igus:motor	 igus:motor	 Goal: 30.962971231454702, Current -29.992920250991652, Backwards: false
-
-// igus:motor	 igus:motor	 Motor j2 Set Pos to -93.07753910530988 actual 63.07753910530988 velocity 123 acceleration 90.00000000000014
-// igus:motor	 igus:motor	 Determined we are going to start deccel at 44.58653910530991, A: 18.490999999999968, B: 56.133071473340515, D: 93.11507147334045, T1: 1.3666666666666645
-// igus:motor	 igus:motor	 Goal: 63.07753910530988, Current -30.037532368030572, Backwards: false
-
-// igus:motor	 igus:motor	 Motor j3 Set Pos to -65.22477366406876 actual 65.22477366406876 velocity 86 acceleration 63.01556003980001
-// igus:motor	 igus:motor	 Determined we are going to start deccel at 52.314311557786375, A: 12.910462106282377, B: 39.37572442119686, D: 65.19664863376161, T1: 1.3647422945330208
-// igus:motor	 igus:motor	 Goal: 65.22477366406876, Current 0.02812503030714473, Backwards: false
-
-// igus:motor	 igus:motor	 Motor j4 Set Pos to 78.4686540607885 actual -70.4686540607885 velocity 104 acceleration 75.85305014141083
-// igus:motor	 igus:motor	 Determined we are going to start deccel at -54.783589349719364, A: 15.685064711069128, B: 47.108339304398804, D: 78.47846872653706, T1: 1.3710720901284201
-// igus:motor	 igus:motor	 Goal: -70.4686540607885, Current 8.009814665748562, Backwards: true
-
-// igus:motor	 igus:motor	 Motor j5 Set Pos to 23.41864320887265 actual -37.41864320887265 velocity 31 acceleration 22.61789184271329
-// igus:motor	 igus:motor	 Determined we are going to start deccel at -32.7449096560236, A: 4.673733552849052, B: 14.0532730666411, D: 23.400740172339205, T1: 1.3705963498091063
-// igus:motor	 igus:motor	 Goal: -37.41864320887265, Current -14.017903036533445, Backwards: true
-
+// For rounding
 const r = v => Math.round(v * 100) / 100; 
 
-const angles = [
+const anglesOld = [
   -62.82705885308328,
   -60.9629712314547,
   -93.07753910530988,
@@ -108,15 +14,24 @@ const angles = [
   23.41864320887265
 ];
 
+const angles = [
+  17.354024636261325,
+  13.313356577068296,
+  -90.20268335754047,
+  -54.025338238520575,
+  -21.62744121257538,
+  52.01598310148049
+]
+
 const RATIO = 4.25;
 
 const motors = [
-  { id: 'j0', currentPosition: 0, flip: true, maxVelocity: 27, maxAccel: 90, offset: 0 },
-  { id: 'j1', currentPosition: -30, flip: true, maxVelocity: 27, maxAccel: 90, offset: 30 },
-  { id: 'j2', currentPosition: -30, flip: true, maxVelocity: 27, maxAccel: 90, offset: 30 },
-  { id: 'j3', currentPosition: 0, flip: true, maxVelocity: 27, maxAccel: 90, offset: 0 },
-  { id: 'j4', currentPosition: 8, flip: true, maxVelocity: 27, maxAccel: 90, offset: -8 },
-  { id: 'j5', currentPosition: -14, flip: true, maxVelocity: 27, maxAccel: 90, offset: 14 },
+  { id: 'j0', currentPosition: 0, flip: true, maxVelocity: 27, maxAccel: 30, offset: 0 },
+  { id: 'j1', currentPosition: -30, flip: true, maxVelocity: 27, maxAccel: 30, offset: 30 },
+  { id: 'j2', currentPosition: -30, flip: true, maxVelocity: 27, maxAccel: 30, offset: 30 },
+  { id: 'j3', currentPosition: 0, flip: true, maxVelocity: 27, maxAccel: 30, offset: 0 },
+  { id: 'j4', currentPosition: 8, flip: true, maxVelocity: 27, maxAccel: 30, offset: -8 },
+  { id: 'j5', currentPosition: -14, flip: true, maxVelocity: 27, maxAccel: 30, offset: 14 },
 ];
 
 const getGoalPositon = (motor, position) => {
@@ -181,7 +96,7 @@ const generateMotionCommands = (motors, angles, speed, acceleration) => {
       // Example1: B = 90 - ( 2 * 52.8125 ) = -15.625 
       // Example2: B = 10 - ( 2 * 52.8125 ) = -95.625
       let B = D - (2 * A);
-
+ 
       // Time to travel distance B (while at max speed) is B / maxSpeed
       // Note, if B is negative then T2 is zero as we are not traveling any distance at max speed ( never got up to speed )
       const T2 = B > 0 ? B / maxSpeed : 0;
@@ -203,11 +118,13 @@ const generateMotionCommands = (motors, angles, speed, acceleration) => {
       }
     });
 
-    console.log(`Longest time is ${r(longest.time)} for motor ${longest.motor.id}`);
-    // console.log('RESULTS', results);
+    logger(`Longest time is ${r(longest.time)} for motor ${longest.motor.id}`);
 
     // -----------------------------------------------------------
     // Step2: Now that we know the longest time we can use what we learned to create the motion commands
+    const commands = []; 
+		let success = true;
+
     motors.forEach((motor, i) => {
 
       // Scale down the speed based on longest time
@@ -223,15 +140,22 @@ const generateMotionCommands = (motors, angles, speed, acceleration) => {
       // What acceleration is required to reach travelSpeed in (longestTime - longestMotorTimeAtSpeed)/2 seconds?
       const accelTime = ( longest.time - longest.timeAtSpeed ) /2;
       const acceleration = travelSpeed / accelTime;
+
+      // Determine where to start decceleration
+      // Note if B is negative then we simply split the distance in two half for deccel and half for accel
+      const deccelAt = B < 0 ? D / 2 : A + B;
+
       
       if( travelSpeed <= motor.maxVelocity + 1 && acceleration <= motor.maxAccel + 1 ){
-        // Now go! ( make sure we pass degrees and not steps to this func )
-        console.log(`Motor ${motor.id} to ${r(angles[i])} at a speed of ${r(travelSpeed)} over distance of ${r(B)} for ${r(T2)} seconds and acceleration of ${r(acceleration)} over distance of ${r(T1)} for ${r(A)} seconds.`);
+        logger(`Motor ${motor.id} to ${r(angles[i])} at a speed of ${r(travelSpeed)} over distance of ${r(B)} for ${r(T2)} seconds and acceleration of ${r(acceleration)} over distance of ${r(A)} for ${r(T1)} seconds, and will start decel at ${deccelAt}.`);
+       	commands.push({ id: motor.id, angle: angles[i], velocity: travelSpeed, acceleration, deccelAt  }); 
       } else {
-        console.log(`ERROR!! unable to set pos for motor ${motor.id} with acceleration ${acceleration} and speed ${travelSpeed} as one of them is too big!`)
+        success = false;
+        logger(`ERROR!! unable to set pos for motor ${motor.id} with acceleration ${acceleration} and speed ${travelSpeed} as one of them is too big!`)
       }
-    })
+    });
 
+		return { commands, success };
 }
 
 console.log(generateMotionCommands(motors, angles));
