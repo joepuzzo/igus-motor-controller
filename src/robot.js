@@ -2,6 +2,7 @@
 import can from "socketcan";
 import {EventEmitter} from 'events';
 import { Motor } from './motor.js';
+import { getMotionCommands } from './utils.js';
 
 import five from "johnny-five";
 import { mockBoard } from "./mockboard.js";
@@ -384,7 +385,8 @@ export class Robot extends EventEmitter   {
     });
   }
 
-  moveMotorsAtSameTime(angles, speed){
+
+	moveMotorsAtSameTime(angles, speed){
 
       // Step1: First find the motor that will take the longest time
       let longestTime = 0;
@@ -499,6 +501,22 @@ export class Robot extends EventEmitter   {
         }
       })
 
+  }
+
+  moveMotorsAtSameTime2(angles, speed, acceleration){
+   
+      // Get motion commands
+      const { commands, success } = getMotionCommands(this.motors, angles, speed, acceleration);
+
+      // Only execute motions if we have a command for each motor and we succeeded
+      if(success && commands.length == angles.length){
+        this.motors.forEach((motor, i) => {
+          const command = commands[i];
+          motor.setPosition(command.angle, command.velocity, command.acceleration);
+        });
+      } else {
+        logger(`ERROR unable to make motion.`);
+      }
   }
 
   /** ---------------------------------

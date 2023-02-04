@@ -1,6 +1,6 @@
 // For debugging
 import { Debug } from './debug.js';
-const logger = Debug('igus:robot' + '\t');
+const logger = Debug('igus:utils' + '\t');
 
 // For rounding
 const r = v => Math.round(v * 100) / 100; 
@@ -97,7 +97,7 @@ export const getMotion = (motor, angle, speed, acceleration) => {
 }
 
 
-export const generateMotionCommands = (motors, angles, speed, acceleration) => {
+export const getMotionCommands = (motors, angles, speed, acceleration) => {
 
     // -----------------------------------------------------------
     // Step1: First find the motor that will take the longest time
@@ -166,4 +166,4 @@ export const generateMotionCommands = (motors, angles, speed, acceleration) => {
 		return { commands, success };
 }
 
-//console.log(generateMotionCommands(motors, angles));
+//console.log(getMotionCommands(motors, angles));
