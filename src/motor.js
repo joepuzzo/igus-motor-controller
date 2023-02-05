@@ -59,8 +59,8 @@ export class Motor extends EventEmitter   {
     this.cyclesPerSec = 1000/this.cycleTime;  // how many cycles per second  
     this.gearScale = 1031.11;                 // scale for iugs Rebel joint = Gear Ratio x Encoder Ticks / 360 = Gear Scale
     this.encoderTics = 7424;					        // tics per revolution
-    this.maxVelocity = 29;                    // degree / sec
-    this.maxAccel    = 30;                    // max accel in deg/s
+    this.maxVelocity = 45;                    // degree / sec
+    this.maxAccel    = 40;                    // max accel in deg/s
     this.velocity = this.maxVelocity * RATIO; // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       
     this.acceleration = this.maxAccel * RATIO;// The acceleration in degree / sec
@@ -154,7 +154,7 @@ export class Motor extends EventEmitter   {
 
       const newPos = (pos - this.gearZero) / this.gearScale;
 			const newTimestamp = Date.now();
-      this.calculatedVelocity = (Math.abs(this.currentPosition - newPos)) / ( newTimestamp - this.reportTimestamp) * 1000;
+      this.calculatedVelocity = (this.currentPosition - newPos) / ( newTimestamp - this.reportTimestamp) * 1000;
       this.currentPosition = (pos - this.gearZero) / this.gearScale;
       this.reportInterval = newTimestamp - this.reportTimestamp;
 			this.reportTimestamp = newTimestamp;
@@ -168,6 +168,16 @@ export class Motor extends EventEmitter   {
         logger(`Motor ${this.id} is updating its goal to ${this.currentPosition}`);
         this.goalPosition = this.currentPosition;
         this.jointPositionSetPoint = this.currentPosition;
+      }
+
+      // TODO this is close to working but need more effort
+      if(this.admittanceEnabled && !this.moving && Math.abs(this.calculatedVelocity) > 0.01 ){
+        this.moving = true;
+        //const nextPos = this.currentPosition + ( this.flip ? -1 : 1);
+        const rate = this.calculatedVelocity < 0 ? -1 : 1;
+        const nextPos = this.flip ? -this.currentPosition + rate : this.currentPosition + rate;
+        logger(`Motor ${this.id} adding steps vel ${this.calculatedVelocity} current ${this.currentPosition} next ${nextPos}`);
+        this.setPosition(nextPos, 20);
       }
 
       // This is to fast so we just have interval in the robot
@@ -340,10 +350,9 @@ export class Motor extends EventEmitter   {
 			this.jointPositionSetPoint = this.goalPosition;
       // When we are really close just callit quits
       if( distance < 0.1 ) { 
-        //this.goalPosition = this.currentPosition;
         this.jointPositionSetPoint = this.currentPosition;
         // If we are here we are done moving
-        if( this.moving ){
+        if( this.moving && this.calculatedVelocity === 0 ){ // NOTE: I added the calculated velocity check for admittance ( might remove in future )
           logger(`Motor ${this.id} is done moving.`);
           this.moving = false;
           this.emit('moved', this.id);
@@ -416,8 +425,8 @@ export class Motor extends EventEmitter   {
     // Create buffer for data
     const buff = Buffer.alloc(8)
 
-    //console.log('POS', pos);
-
+    //console.log('POS', pos); 
+         
     // Set data 
     buff[0] = 0x14;                                           // First byte denominates the command, here: set joint position
     buff[1] = 0x00;                                           // Velocity, not used
@@ -946,7 +955,7 @@ get state(){
     reportInterval: this.reportInterval,
     sendTimestamp: this.sendTimestamp,
     sendInterval: this.sendInterval,
-    calculatedVelocity: this.calculatedVelocity,
+    calculatedVelocity: Math.abs(this.calculatedVelocity),
     currentVelocity: this.currentVelocity / RATIO,
     encoderOffset: this.flip ? -this.encoderOffset : this.encoderOffset
   }
