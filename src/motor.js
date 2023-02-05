@@ -59,7 +59,7 @@ export class Motor extends EventEmitter   {
     this.cyclesPerSec = 1000/this.cycleTime;  // how many cycles per second  
     this.gearScale = 1031.11;                 // scale for iugs Rebel joint = Gear Ratio x Encoder Ticks / 360 = Gear Scale
     this.encoderTics = 7424;					        // tics per revolution
-    this.maxVelocity = 27;                    // degree / sec
+    this.maxVelocity = 29;                    // degree / sec
     this.maxAccel    = 30;                    // max accel in deg/s
     this.velocity = this.maxVelocity * RATIO; // Initial velocity is max
     this.currentVelocity = this.velocity;     // the current velocity ( will grow and shrink based on acceleration )       

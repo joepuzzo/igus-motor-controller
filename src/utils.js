@@ -56,7 +56,7 @@ const getGoalPositon = (motor, position) => {
 //  
 //               DECCEL
 //
-export const getMotion = (motor, angle, speed, acceleration) => {
+export const getMotion = (motor, angle, speed, acceleration, motionScale = 1) => {
 
     const maxSpeed = speed ?? motor.maxVelocity;
     const maxAccel = acceleration ?? motor.maxAccel;
@@ -69,11 +69,11 @@ export const getMotion = (motor, angle, speed, acceleration) => {
 
     // T1 is the time to get up to maxSpeed given at an acceleration.
     // Example: T1 = 65°s / 40°s = 1.625°s
-    const T1 = maxSpeed / maxAccel;
+    const T1 = maxSpeed / maxAccel * motionScale;
 
     // Using displacement equation s=1/2 at^2 to get the distance traveled during T1
     // Example: A = .5 * 40°s * ( 1.625°s ** 2 ) = 52.8125
-    const A = .5 * maxAccel * (T1 ** 2);
+    const A = .5 * maxAccel * (T1 ** 2) * motionScale;
 
     // B = total distance - distance traveled to accelerate / decelerate
     // Example1: B = 90 - ( 2 * 52.8125 ) = -15.625 
@@ -113,7 +113,7 @@ export const getMotionCommands = (motors, angles, speed, acceleration) => {
     // Iterate over each motor to determine longest
     motors.forEach((motor, i) => {
 
-      const motion = getMotion(motor, angles[i], speed, acceleration);
+      const motion = getMotion(motor, angles[i], speed, acceleration, 0.22);
       
       // Add to results
       results.push(motion)
@@ -152,7 +152,7 @@ export const getMotionCommands = (motors, angles, speed, acceleration) => {
       // This leaves (longestTime - longestMotorTimeAtSpeed) many seconds for accel and decel
       // What acceleration is required to reach travelSpeed in (longestTime - longestMotorTimeAtSpeed)/2 seconds?
       const accelTime = ( longest.time - longest.timeAtSpeed ) /2;
-      const acceleration = travelSpeed / accelTime;
+      const acceleration = travelSpeed / accelTime * 0.22;
       
       if( travelSpeed <= motor.maxVelocity + 1 && acceleration <= motor.maxAccel + 1 ){
         logger(`Motor ${motor.id} to ${r(angles[i])} at a speed of ${r(travelSpeed)} over distance of ${r(B)} for ${r(T2)} seconds and acceleration of ${r(acceleration)} over distance of ${r(A)} for ${r(T1)} seconds`);
