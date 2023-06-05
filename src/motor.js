@@ -41,7 +41,7 @@ export class Motor extends EventEmitter   {
   /** -----------------------------------------------------------
    * Constructor
    */
-  constructor({ id, canId, channel, cycleTime = 50, limNeg = -180, limPos = 180, accelEnabled = true, offset = 0, flip = false }) {
+  constructor({ id, canId, channel, cycleTime = 50, limNeg = -180, limPos = 180, accelEnabled = true, offset = 0, flip = false, gearRatio = 50 }) {
 
     logger(`creating motor ${id} with canId ${canId}`);
 
@@ -57,7 +57,8 @@ export class Motor extends EventEmitter   {
     this.enabled = false;                     // if motor is enabled
     this.cycleTime = cycleTime;               // in ms .. example: 50ms
     this.cyclesPerSec = 1000/this.cycleTime;  // how many cycles per second  
-    this.gearScale = 1031.11;                 // scale for iugs Rebel joint = Gear Ratio x Encoder Ticks / 360 = Gear Scale
+    //this.gearScale = 1031.11;               // scale for iugs Rebel joint = Gear Ratio x Encoder Ticks / 360 = Gear Scale 
+    this.gearScale = Math.round( (gearRatio * 7424 / 360) * 100 ) / 100;
     this.encoderTics = 7424;					        // tics per revolution
     this.maxVelocity = 45;                    // degree / sec
     this.maxAccel    = 40;                    // max accel in deg/s
@@ -95,6 +96,8 @@ export class Motor extends EventEmitter   {
 
     // Our can channel
     this.channel = channel;
+
+    logger(`Motor ${this.id} has gearScale of ${this.gearScale}`);
 
     // Start up
     this.start();
@@ -226,7 +229,7 @@ export class Motor extends EventEmitter   {
       // Bug at 180deg initialization
       if(Math.abs(inDegrees) === 180){
         // TODO we should remove this when we figure out whats going on ( maybe its not needed anymore )
-        logger(`Motor ${this.id} reporting position ${pos} but in fact its at 180`)
+        logger(`Motor ${this.id} reporting position ${pos} but in fact its at 0`)
         pos = 0;
         inDegrees = 0;
       }
@@ -457,7 +460,7 @@ export class Motor extends EventEmitter   {
    */
   setPosition( pos, velocity = this.maxVelocity, acceleration = this.maxAccel ) {
 
-    if( !this.referenced ){
+    if( !this.referenced && !this.zeroed ){
       logger(`Error: This motor is not referenced and cant move. Please reference before moving..`);
       this.error = "NOT_REFERENCED/CANT_MOVE";
       return;

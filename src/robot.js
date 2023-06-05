@@ -357,7 +357,7 @@ export class Robot extends EventEmitter   {
       setTimeout(()=>{
         motor.enable();
         this.emit("meta");
-      }, 3000 * i)
+      }, 1000 * i)
     });     
 
   }
