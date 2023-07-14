@@ -28,7 +28,7 @@ export class Robot extends EventEmitter   {
   /** -----------------------------------------------------------
    * Constructor
    */
-  constructor({ id, mock }) {
+  constructor({ id, mock, canIf }) {
 
     logger(`creating robot with id ${id}`);
 
@@ -36,7 +36,7 @@ export class Robot extends EventEmitter   {
     super();
 
     // Create channel
-    this.channel = can.createRawChannel('can1', true);
+    this.channel = can.createRawChannel(canIf, true);
 
     // Define parameters
     this.id = id;

@@ -27,7 +27,7 @@ function dec2bin(dec) {
   return (dec >>> 0).toString(2).padStart(8, '0');
 }
 
-const RATIO = 4.25;
+const RATIO = 3.25;
 
 /**
  * Igus motor controller

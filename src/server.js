@@ -13,7 +13,7 @@ export const startServer = (config) => {
   logger("created socket", connectionString);
 
   // Create robot
-  const robot = new Robot({ id: config.id });
+  const robot = new Robot({ id: config.id, canIf: config.canIf });
 
   /* ---------- Subscribe to robot events ---------- */
   robot.on('state', () => {
